@@ -274,7 +274,28 @@ impl Matrix {
     }
 
     fn lower_triangular_inverse(&self) -> Option<Self> {
-        todo!()
+        // FIXME: Check that it is non-singular (no diagonals are 0)
+
+        let n = self.num_rows;
+        let mut out = Matrix::identity(n);
+
+        for i in 0..n {
+            // Check if matrix is singular
+            if self[(i, i)] == 0.0 {
+                return None;
+            }
+
+            out[(i, i)] = 1.0 / self[(i, i)];
+
+            for j in 0..i {
+                for k in j..i {
+                    out[(i, j)] += self[(i, k)] * out[(k, j)];
+                    out[(i, j)] = -out[(i, j)] / self[(i, i)];
+                }
+            }
+        }
+
+        Some(out)
     }
 
     /// Returns the inverse of the matrix.
@@ -443,7 +464,7 @@ mod tests {
         let mat1 = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
         let mat2 = Matrix::from_vec(3, 2, vec![7., 8., 9., 10., 11., 12.]);
 
-        let mult = mat1.mul(&mat2);
+        let mult = mat1.multiply(&mat2);
 
         assert_eq!(mult[(0, 0)], 58.0);
         assert_eq!(mult[(0, 1)], 64.0);
@@ -464,8 +485,8 @@ mod tests {
     fn can_check_triangular_matrix() {
         let mat = Matrix::from_vec(2, 2, vec![1., 2., 0., 1.]);
         assert!(mat.is_square() == true);
-        assert!(mat.is_triangular_upper() == true);
         assert!(mat.is_triangular_lower() == false);
+        assert!(mat.is_triangular_upper() == true);
 
         let mat = Matrix::from_vec(2, 2, vec![1., 0., 2., 1.]);
         assert!(mat.is_square() == true);
@@ -476,5 +497,12 @@ mod tests {
         assert!(mat.is_square() == false);
         assert!(mat.is_triangular_lower() == false);
         assert!(mat.is_triangular_upper() == false);
+    }
+
+    #[test]
+    fn can_invert_lower_triangular_matrix() {
+        let mat = Matrix::from_vec(2, 2, vec![1., 0., 2., 1.]);
+        dbg!(&mat);
+        dbg!(mat.lower_triangular_inverse());
     }
 }
