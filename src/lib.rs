@@ -80,6 +80,21 @@ impl Matrix {
         }
     }
 
+    /// Creates an identity matrix of the specified size.
+    pub fn identity(size: usize) -> Self {
+        let mut out = Self::new(size, size);
+
+        for i in 0..size {
+            for j in 0..size {
+                if i == j {
+                    out[(i, j)] = 1.0;
+                }
+            }
+        }
+
+        out
+    }
+
     /// Converts from matrix indicies to vector index.
     fn idx(&self, row: usize, col: usize) -> usize {
         self.num_cols * row + col
@@ -199,6 +214,20 @@ impl Matrix {
 
         transposed
     }
+
+    /// Returns `true` if the matrix is square.
+    pub fn is_square(&self) -> bool {
+        if self.num_cols == self.num_rows {
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Returns the inverse of the matrix.
+    pub fn inverse(&self) -> Self {
+        todo!()
+    }
 }
 
 impl std::fmt::Debug for Matrix {
@@ -269,6 +298,14 @@ mod tests {
         let mat = Matrix::new(2, 3);
         assert_eq!(mat.num_rows(), 2);
         assert_eq!(mat.num_cols(), 3);
+
+        let mat = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
+        assert_eq!(mat.size(), (2, 3));
+
+        let mat = Matrix::identity(2);
+        assert_eq!(mat.size(), (2, 2));
+        assert_eq!(mat[(0, 0)], 1.0);
+        assert_eq!(mat[(1, 1)], 1.0);
     }
 
     #[test]
