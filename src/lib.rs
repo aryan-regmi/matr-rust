@@ -1,7 +1,7 @@
 use core::panic;
 use std::{
     mem::ManuallyDrop,
-    ops::{Index, IndexMut},
+    ops::{Div, Index, IndexMut, Mul},
     ptr::NonNull,
 };
 
@@ -179,7 +179,7 @@ impl Matrix {
     ///
     /// ## Panics
     /// * Panics if the dimensions of the matricies don't match.
-    pub fn mul(&self, other: &Self) -> Self {
+    pub fn multiply(&self, other: &Self) -> Self {
         // Input validation
         {
             if self.num_cols != other.num_rows {
@@ -339,6 +339,66 @@ impl PartialEq for Matrix {
             }
             true
         }
+    }
+}
+
+impl Mul<f32> for Matrix {
+    type Output = Self;
+
+    fn mul(mut self, rhs: f32) -> Self::Output {
+        self.scale(rhs);
+        self
+    }
+}
+
+impl Mul<f32> for &mut Matrix {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        self.scale(rhs);
+        self
+    }
+}
+
+impl Div<f32> for Matrix {
+    type Output = Self;
+
+    fn div(mut self, rhs: f32) -> Self::Output {
+        self.scale(1. / rhs);
+        self
+    }
+}
+
+impl Div<f32> for &mut Matrix {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        self.scale(1. / rhs);
+        self
+    }
+}
+
+impl Mul<Matrix> for Matrix {
+    type Output = Self;
+
+    fn mul(self, rhs: Matrix) -> Self::Output {
+        self.multiply(&rhs)
+    }
+}
+
+impl Mul<Matrix> for &Matrix {
+    type Output = Matrix;
+
+    fn mul(self, rhs: Matrix) -> Self::Output {
+        self.multiply(&rhs)
+    }
+}
+
+impl Mul<&Matrix> for &Matrix {
+    type Output = Matrix;
+
+    fn mul(self, rhs: &Matrix) -> Self::Output {
+        self.multiply(rhs)
     }
 }
 
