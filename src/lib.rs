@@ -1,5 +1,14 @@
 use core::panic;
-use std::{fmt::Write, mem::ManuallyDrop, ops::Index, ptr::NonNull};
+use std::{
+    mem::ManuallyDrop,
+    ops::{Index, IndexMut},
+    ptr::NonNull,
+};
+
+// TODO: Add arithmetic operators!
+//
+// TODO: Add func to solve Ax = b
+//  - Add matrix decomp/determinant funcs
 
 pub struct Matrix {
     /// Number of rows.
@@ -11,7 +20,6 @@ pub struct Matrix {
     /// The memory array with the actual data.
     data: NonNull<f32>,
 }
-
 impl std::fmt::Debug for Matrix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
@@ -37,6 +45,20 @@ impl Drop for Matrix {
                 self.num_rows * self.num_cols,
             )
         };
+    }
+}
+
+impl Index<(usize, usize)> for Matrix {
+    type Output = f32;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        self.get(index.0, index.1).expect("Invalid index")
+    }
+}
+
+impl IndexMut<(usize, usize)> for Matrix {
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        self.get_mut(index.0, index.1).expect("Invalid index")
     }
 }
 
@@ -186,34 +208,40 @@ impl Matrix {
 mod tests {
     use super::*;
 
-    // #[test]
-    // fn can_create_matrix() {
-    //     let mat = Matrix::new(2, 3);
-    //     assert_eq!(mat.num_rows(), 2);
-    //     assert_eq!(mat.num_cols(), 3);
-    // }
-    //
-    // #[test]
-    // fn can_scale_matrix() {
-    //     let mut mat = Matrix::new(2, 3);
-    //     for i in 0..2 {
-    //         for j in 0..3 {
-    //             mat.set(i, j, 2.0);
-    //         }
-    //     }
-    //     mat.scale(4.0);
-    //
-    //     for i in 0..2 {
-    //         for j in 0..3 {
-    //             assert_eq!(mat.get(i, j), Some(&8.0));
-    //         }
-    //     }
-    // }
+    #[test]
+    fn can_create_matrix() {
+        let mat = Matrix::new(2, 3);
+        assert_eq!(mat.num_rows(), 2);
+        assert_eq!(mat.num_cols(), 3);
+    }
+
+    #[test]
+    fn can_scale_matrix() {
+        let mut mat = Matrix::new(2, 3);
+        for i in 0..2 {
+            for j in 0..3 {
+                mat.set(i, j, 2.0);
+            }
+        }
+        mat.scale(4.0);
+
+        for i in 0..2 {
+            for j in 0..3 {
+                assert_eq!(mat.get(i, j), Some(&8.0));
+            }
+        }
+    }
 
     #[test]
     fn can_mul_matrix() {
         let mat1 = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
-        // dbg!(mat1);
-        // mat.set(0, col, value)
+        let mat2 = Matrix::from_vec(3, 2, vec![7., 8., 9., 10., 11., 12.]);
+
+        let mult = mat1.mul(&mat2);
+
+        assert_eq!(mult[(0, 0)], 58.0);
+        assert_eq!(mult[(0, 1)], 64.0);
+        assert_eq!(mult[(1, 0)], 139.0);
+        assert_eq!(mult[(1, 1)], 154.0);
     }
 }
