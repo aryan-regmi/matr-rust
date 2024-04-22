@@ -10,6 +10,7 @@ use std::{
 // TODO: Add func to solve Ax = b
 //  - Add matrix decomp/determinant funcs
 
+/// A representation of a multi-dimensional vector.
 pub struct Matrix {
     /// Number of rows.
     num_rows: usize,
@@ -20,6 +21,7 @@ pub struct Matrix {
     /// The memory array with the actual data.
     data: NonNull<f32>,
 }
+
 impl std::fmt::Debug for Matrix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
@@ -63,6 +65,12 @@ impl IndexMut<(usize, usize)> for Matrix {
 }
 
 impl Matrix {
+    /// Creates a new matrix with the specified size.
+    ///
+    /// The created matrix is initalized with zeros.
+    ///
+    /// # Panics
+    /// * Panics if the number of rows or columns is zero.
     pub fn new(num_rows: usize, num_cols: usize) -> Self {
         // Input validation
         {
@@ -84,6 +92,11 @@ impl Matrix {
         }
     }
 
+    /// Creates a matrix of the specified size with elements from the given vector.
+    ///
+    /// # Panics
+    /// * Panics if the number of rows or columns is zero.
+    /// * Panics if the length of the vector is not equal to `num_cols * num_rows`.
     pub fn from_vec(num_rows: usize, num_cols: usize, v: Vec<f32>) -> Self {
         // Input validation
         {
@@ -110,38 +123,48 @@ impl Matrix {
     }
 
     /// Converts from matrix indicies to vector index.
-    fn vec_idx(&self, row: usize, col: usize) -> usize {
+    fn idx(&self, row: usize, col: usize) -> usize {
         self.num_cols * row + col
     }
 
+    /// Returns a reference to the matrix element at the specified row-column index.
+    ///
+    /// If the given indices are outside the matrix's bounds, `None` will be return.
     pub fn get(&self, row: usize, col: usize) -> Option<&f32> {
-        // Iput validation
+        // Input validation
         {
             if row >= self.num_rows || col >= self.num_cols {
                 return None;
             }
         }
 
-        let val = unsafe { self.data.as_ptr().add(self.vec_idx(row, col)).as_ref() };
+        let val = unsafe { self.data.as_ptr().add(self.idx(row, col)).as_ref() };
 
         val
     }
 
+    /// Returns a mutable reference to the matrix element at the specified row-column index.
+    ///
+    /// If the given indices are outside the matrix's bounds, `None` will be return.
     pub fn get_mut(&mut self, row: usize, col: usize) -> Option<&mut f32> {
-        // Iput validation
+        // Input validation
         {
             if row >= self.num_rows || col >= self.num_cols {
                 return None;
             }
         }
 
-        let val = unsafe { self.data.as_ptr().add(self.vec_idx(row, col)).as_mut() };
+        let val = unsafe { self.data.as_ptr().add(self.idx(row, col)).as_mut() };
 
         val
     }
 
+    /// Sets the element at the specified matrix index to `value`.
+    ///
+    /// # Panics
+    /// * Panics if the row or column indicies are outside the matrix's bounds.
     pub fn set(&mut self, row: usize, col: usize, value: f32) {
-        // Iput validation
+        // Input validation
         {
             if row >= self.num_rows {
                 panic!("The row index must be less than {}", self.num_rows)
@@ -191,14 +214,17 @@ impl Matrix {
         out
     }
 
+    /// Returns the size of the matrix as `(rows, columns)`.
     pub const fn size(&self) -> (usize, usize) {
         (self.num_rows, self.num_cols)
     }
 
+    /// Returns then number of rows in the matrix.
     pub const fn num_rows(&self) -> usize {
         self.num_rows
     }
 
+    /// Returns then number of columns in the matrix.
     pub const fn num_cols(&self) -> usize {
         self.num_cols
     }
