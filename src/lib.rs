@@ -9,6 +9,18 @@ use std::{
 //
 // TODO: Add func to solve Ax = b
 //  - Add matrix decomp/determinant funcs
+//
+// TODO: Add inplace versions of algos!
+
+/// Returns a vector of size `n` with elements linearly spaced between `start` and `end`.
+pub fn linspace(start: f32, end: f32, n: usize) -> Vec<f32> {
+    let h = (end - start) / (n - 1) as f32;
+    let mut x = vec![start; n];
+    for i in 1..n {
+        x[i] = x[i - 1] + h;
+    }
+    x
+}
 
 /// A representation of a multi-dimensional vector.
 pub struct Matrix {
@@ -93,6 +105,11 @@ impl Matrix {
         }
 
         out
+    }
+
+    /// Creates a matrix of the specified size, filled with zeros.
+    pub fn zeros(num_rows: usize, num_cols: usize) -> Self {
+        Self::new(num_rows, num_cols)
     }
 
     /// Converts from matrix indicies to vector index.
@@ -224,6 +241,42 @@ impl Matrix {
         }
     }
 
+    /// Returns `true` if the matrix is an upper triangular.
+    pub fn is_triangular_upper(&self) -> bool {
+        if self.is_square() {
+            for i in 1..self.num_rows {
+                for j in 0..i {
+                    if self[(i, j)] != 0.0 {
+                        return false;
+                    }
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Returns `true` if the matrix is an lower triangular.
+    pub fn is_triangular_lower(&self) -> bool {
+        if self.is_square() {
+            for i in 0..self.num_rows - 1 {
+                for j in i + 1..self.num_rows {
+                    if self[(i, j)] != 0.0 {
+                        return false;
+                    }
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    fn lower_triangular_inverse(&self) -> Option<Self> {
+        todo!()
+    }
+
     /// Returns the inverse of the matrix.
     pub fn inverse(&self) -> Self {
         todo!()
@@ -345,5 +398,23 @@ mod tests {
             mat1.transpose(),
             Matrix::from_vec(3, 2, vec![1., 4., 2., 5., 3., 6.])
         )
+    }
+
+    #[test]
+    fn can_check_triangular_matrix() {
+        let mat = Matrix::from_vec(2, 2, vec![1., 2., 0., 1.]);
+        assert!(mat.is_square() == true);
+        assert!(mat.is_triangular_upper() == true);
+        assert!(mat.is_triangular_lower() == false);
+
+        let mat = Matrix::from_vec(2, 2, vec![1., 0., 2., 1.]);
+        assert!(mat.is_square() == true);
+        assert!(mat.is_triangular_lower() == true);
+        assert!(mat.is_triangular_upper() == false);
+
+        let mat = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
+        assert!(mat.is_square() == false);
+        assert!(mat.is_triangular_lower() == false);
+        assert!(mat.is_triangular_upper() == false);
     }
 }
