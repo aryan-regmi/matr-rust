@@ -342,30 +342,43 @@ impl Matrix {
 
     /// Performs LU decomposition of the matrix using Doolittle's method.
     ///
-    /// Taken from [here](https://en.wikipedia.org/wiki/LU_decomposition).
-    fn lu_decom(&self) -> Self {
+    /// Taken from [here](https://www.geeksforgeeks.org/doolittle-algorithm-lu-decomposition/).
+    fn lu_decomposition(&self) -> (Self, Self) {
         let n = self.num_rows;
-        let mut out = self.clone();
+        let mut lower = Matrix::zeros(n, n);
+        let mut upper = Matrix::zeros(n, n);
 
         for i in 0..n {
-            for j in i..n {
+            // Upper triangular
+            for k in i..n {
+                // Sum of `L[i,j] * U[j,k]`
                 let mut sum = 0.0;
-                for k in 0..i {
-                    sum += out[(i, k)] * out[(k, j)];
+                for j in 0..i {
+                    sum += lower[(i, j)] * upper[(j, k)];
                 }
-                out[(i, j)] = self[(i, j)] - sum;
+
+                // Evaluate `U[i,k]`
+                upper[(i, k)] = self[(i, k)] - sum;
             }
 
-            for j in i + 1..n {
-                let mut sum = 0.0;
-                for k in 0..i {
-                    sum += out[(j, k)] * out[(k, i)];
+            // Lower triangular
+            for k in i..n {
+                if i == k {
+                    lower[(i, i)] = 1.0;
+                } else {
+                    // Sum of `L[k,j] * U[j,i]`
+                    let mut sum = 0.0;
+                    for j in 0..i {
+                        sum += lower[(k, j)] * upper[(j, i)];
+                    }
+
+                    // Evaluate `L[k,i]`
+                    lower[(k, i)] = (self[(k, i)] - sum) / upper[(i, i)];
                 }
-                out[(j, i)] = (1.0 / out[(i, i)]) * (self[(j, i)] - sum);
             }
         }
 
-        out
+        (lower, upper)
     }
 
     /// Calculates the inverse of an upper triangular matrix (back substitution).
@@ -403,7 +416,11 @@ impl Matrix {
             } else if self.is_triangular_lower() {
                 return self.lower_triangular_inverse();
             } else {
-                return Some(self.lu_decom());
+                let (l, u) = self.lu_decomposition();
+                return Some(
+                    u.inverse().expect("Invalid upper matrix")
+                        * l.inverse().expect("Invalid lower matrix"),
+                );
             }
         } else {
         }
@@ -667,6 +684,11 @@ mod tests {
 
     #[test]
     fn can_lu_decompose_matrix() {
-        let mat = Matrix::from_vec(2, 2, vec![]);
+        let mat = Matrix::from_vec(3, 3, vec![2., 7., 1., 3., -2., 0., 1., 5., 3.]);
+        dbg!(&mat);
+        let (l, u) = mat.lu_decomposition();
+        dbg!(&l);
+        dbg!(&u);
+        dbg!(l * u);
     }
 }
