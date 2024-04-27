@@ -1,7 +1,7 @@
 use core::panic;
 use std::{
     mem::ManuallyDrop,
-    ops::{Div, Index, IndexMut, Mul},
+    ops::{Div, Index, IndexMut, Mul, Sub},
     ptr::NonNull,
 };
 
@@ -11,6 +11,10 @@ use std::{
 //  - Add matrix decomp/determinant funcs
 //
 // TODO: Add inplace versions of algos!
+//
+// TODO: Add function to reshape matrix.
+//  - Add push/pop functions?
+//  - Add funcs to access entire rows/cols
 
 /// Returns a vector of size `n` with elements linearly spaced between `start` and `end`.
 pub fn linspace(start: f32, end: f32, n: usize) -> Vec<f32> {
@@ -19,6 +23,12 @@ pub fn linspace(start: f32, end: f32, n: usize) -> Vec<f32> {
     for i in 1..n {
         x[i] = x[i - 1] + h;
     }
+
+    // Make sure vector elements are smaller than `end`
+    if x[n - 1] > end {
+        x[n - 1] = end;
+    }
+
     x
 }
 
@@ -92,6 +102,33 @@ impl Matrix {
         }
     }
 
+    /// Creates a new matrix with the specified size.
+    ///
+    /// The created matrix is initalized with the given value.
+    ///
+    /// # Panics
+    /// * Panics if the number of rows or columns is zero.
+    pub fn with_default_value(num_rows: usize, num_cols: usize, value: f32) -> Self {
+        // Input validation
+        {
+            if num_cols == 0 || num_rows == 0 {
+                panic!("The number of rows and columns must be at least 1")
+            }
+        }
+
+        let data = {
+            let v = vec![value; num_rows * num_cols];
+            let mut v = ManuallyDrop::new(v);
+            NonNull::new(v.as_mut_ptr()).expect("Unable to allocate data")
+        };
+
+        Self {
+            num_rows,
+            num_cols,
+            data,
+        }
+    }
+
     /// Creates an identity matrix of the specified size.
     pub fn identity(size: usize) -> Self {
         let mut out = Self::new(size, size);
@@ -107,9 +144,14 @@ impl Matrix {
         out
     }
 
-    /// Creates a matrix of the specified size, filled with zeros.
+    /// Creates a matrix of the specified size, filled with `0`.
     pub fn zeros(num_rows: usize, num_cols: usize) -> Self {
         Self::new(num_rows, num_cols)
+    }
+
+    /// Creates a matrix of the specified size, filled with `1`.
+    pub fn ones(num_rows: usize, num_cols: usize) -> Self {
+        Self::with_default_value(num_rows, num_cols, 1.0)
     }
 
     /// Converts from matrix indicies to vector index.
@@ -273,12 +315,12 @@ impl Matrix {
         }
     }
 
+    /// Calculates the inverse of a lower triangular matrix (forward substitution).
     fn lower_triangular_inverse(&self) -> Option<Self> {
-        // FIXME: Check that it is non-singular (no diagonals are 0)
-
         let n = self.num_rows;
-        let mut out = Matrix::identity(n);
+        let mut out = Matrix::zeros(n, n);
 
+        // Forward substitution
         for i in 0..n {
             // Check if matrix is singular
             if self[(i, i)] == 0.0 {
@@ -298,8 +340,74 @@ impl Matrix {
         Some(out)
     }
 
+    /// Performs LU decomposition of the matrix using Doolittle's method.
+    ///
+    /// Taken from [here](https://en.wikipedia.org/wiki/LU_decomposition).
+    fn lu_decom(&self) -> Self {
+        let n = self.num_rows;
+        let mut out = self.clone();
+
+        for i in 0..n {
+            for j in i..n {
+                let mut sum = 0.0;
+                for k in 0..i {
+                    sum += out[(i, k)] * out[(k, j)];
+                }
+                out[(i, j)] = self[(i, j)] - sum;
+            }
+
+            for j in i + 1..n {
+                let mut sum = 0.0;
+                for k in 0..i {
+                    sum += out[(j, k)] * out[(k, i)];
+                }
+                out[(j, i)] = (1.0 / out[(i, i)]) * (self[(j, i)] - sum);
+            }
+        }
+
+        out
+    }
+
+    /// Calculates the inverse of an upper triangular matrix (back substitution).
+    fn upper_triangular_inverse(&self) -> Option<Self> {
+        let n = self.num_rows;
+        let mut out = self.clone();
+
+        // Back substitution
+        for i in (1..=n - 1).rev() {
+            // Check if matrix is singular
+            if self[(i, i)] == 0.0 {
+                return None;
+            }
+
+            out[(i, i)] = 1.0 / self[(i, i)];
+
+            for j in (0..=i - 1).rev() {
+                let mut sum = 0.0;
+                for k in (j + 1..=i).rev() {
+                    sum = sum - out[(j, k)] * out[(k, i)];
+                }
+
+                out[(j, i)] = sum / out[(j, j)];
+            }
+        }
+
+        Some(out)
+    }
+
     /// Returns the inverse of the matrix.
-    pub fn inverse(&self) -> Self {
+    pub fn inverse(&self) -> Option<Self> {
+        if self.is_square() {
+            if self.is_triangular_upper() {
+                return self.upper_triangular_inverse();
+            } else if self.is_triangular_lower() {
+                return self.lower_triangular_inverse();
+            } else {
+                return Some(self.lu_decom());
+            }
+        } else {
+        }
+
         todo!()
     }
 }
@@ -332,6 +440,20 @@ impl Drop for Matrix {
     }
 }
 
+impl Clone for Matrix {
+    fn clone(&self) -> Self {
+        let mut out = Matrix::zeros(self.num_rows, self.num_cols);
+
+        for i in 0..self.num_rows {
+            for j in 0..self.num_cols {
+                out[(i, j)] = self[(i, j)];
+            }
+        }
+
+        out
+    }
+}
+
 impl Index<(usize, usize)> for Matrix {
     type Output = f32;
 
@@ -360,6 +482,32 @@ impl PartialEq for Matrix {
             }
             true
         }
+    }
+}
+
+impl Sub<f32> for Matrix {
+    type Output = Self;
+
+    fn sub(mut self, rhs: f32) -> Self::Output {
+        for i in 0..self.num_rows {
+            for j in 0..self.num_cols {
+                self[(i, j)] -= rhs;
+            }
+        }
+        self
+    }
+}
+
+impl Sub<Matrix> for f32 {
+    type Output = Matrix;
+
+    fn sub(self, mut rhs: Matrix) -> Self::Output {
+        for i in 0..rhs.num_rows {
+            for j in 0..rhs.num_cols {
+                rhs[(i, j)] = self - rhs[(i, j)];
+            }
+        }
+        rhs
     }
 }
 
@@ -501,8 +649,24 @@ mod tests {
 
     #[test]
     fn can_invert_lower_triangular_matrix() {
-        let mat = Matrix::from_vec(2, 2, vec![1., 0., 2., 1.]);
-        dbg!(&mat);
-        dbg!(mat.lower_triangular_inverse());
+        let mat = Matrix::from_vec(2, 2, vec![1., 0., 2., 1.])
+            .lower_triangular_inverse()
+            .unwrap();
+
+        assert_eq!(mat, Matrix::from_vec(2, 2, vec![1., 0., -2., 1.]));
+    }
+
+    #[test]
+    fn can_invert_upper_triangular_matrix() {
+        let mat = Matrix::from_vec(2, 2, vec![1., 2., 0., 1.])
+            .upper_triangular_inverse()
+            .unwrap();
+
+        assert_eq!(mat, Matrix::from_vec(2, 2, vec![1., -2., 0., 1.]));
+    }
+
+    #[test]
+    fn can_lu_decompose_matrix() {
+        let mat = Matrix::from_vec(2, 2, vec![]);
     }
 }
