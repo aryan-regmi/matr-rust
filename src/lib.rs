@@ -5,16 +5,18 @@ use std::{
     ptr::NonNull,
 };
 
-// TODO: Add arithmetic operators!
-//
 // TODO: Add func to solve Ax = b
 //  - Add matrix decomp/determinant funcs
 //
 // TODO: Add inplace versions of algos!
 //
+// TODO: Add `to_vec` function
+//
 // TODO: Add function to reshape matrix.
 //  - Add push/pop functions?
 //  - Add funcs to access entire rows/cols
+//
+//  TODO: Add subslice struct/funcs
 
 /// Returns a vector of size `n` with elements linearly spaced between `start` and `end`.
 pub fn linspace(start: f32, end: f32, n: usize) -> Vec<f32> {
@@ -340,6 +342,33 @@ impl Matrix {
         Some(out)
     }
 
+    /// Calculates the inverse of an upper triangular matrix (back substitution).
+    fn upper_triangular_inverse(&self) -> Option<Self> {
+        let n = self.num_rows;
+        let mut out = self.clone();
+
+        // Back substitution
+        for i in (1..=n - 1).rev() {
+            // Check if matrix is singular
+            if self[(i, i)] == 0.0 {
+                return None;
+            }
+
+            out[(i, i)] = 1.0 / self[(i, i)];
+
+            for j in (0..=i - 1).rev() {
+                let mut sum = 0.0;
+                for k in (j + 1..=i).rev() {
+                    sum = sum - out[(j, k)] * out[(k, i)];
+                }
+
+                out[(j, i)] = sum / out[(j, j)];
+            }
+        }
+
+        Some(out)
+    }
+
     /// Performs LU decomposition of the matrix using Doolittle's method.
     ///
     /// Taken from [here](https://www.geeksforgeeks.org/doolittle-algorithm-lu-decomposition/).
@@ -381,31 +410,30 @@ impl Matrix {
         (lower, upper)
     }
 
-    /// Calculates the inverse of an upper triangular matrix (back substitution).
-    fn upper_triangular_inverse(&self) -> Option<Self> {
-        let n = self.num_rows;
-        let mut out = self.clone();
-
-        // Back substitution
-        for i in (1..=n - 1).rev() {
-            // Check if matrix is singular
-            if self[(i, i)] == 0.0 {
-                return None;
+    /// Calculates the Euclidean norm of the matrix.
+    pub fn norm(&self) -> f32 {
+        let mut norm = 0.0;
+        for i in 0..self.num_rows {
+            for j in 0..self.num_cols {
+                norm += self[(i, j)].powi(2);
             }
+        }
+        return norm.sqrt();
+    }
 
-            out[(i, i)] = 1.0 / self[(i, i)];
+    /// Performs QR decomposition of the matrix using the Householder method.
+    fn qr_decomposition(&self) -> (Self, Self) {
+        let (m, n) = self.size();
+        let mut q = Matrix::identity(m);
+        let mut r = self.clone();
 
-            for j in (0..=i - 1).rev() {
-                let mut sum = 0.0;
-                for k in (j + 1..=i).rev() {
-                    sum = sum - out[(j, k)] * out[(k, i)];
-                }
-
-                out[(j, i)] = sum / out[(j, j)];
+        for j in 0..n {
+            for i in j..m {
+                // TODO: Create new R matrix + Calc norm
             }
         }
 
-        Some(out)
+        todo!()
     }
 
     /// Returns the inverse of the matrix.
@@ -416,6 +444,9 @@ impl Matrix {
             } else if self.is_triangular_lower() {
                 return self.lower_triangular_inverse();
             } else {
+                // NOTE: Dont' invert triangulars for solution?
+                //  - Check if there is more efficient ways
+
                 let (l, u) = self.lu_decomposition();
                 return Some(
                     u.inverse().expect("Invalid upper matrix")
@@ -685,10 +716,28 @@ mod tests {
     #[test]
     fn can_lu_decompose_matrix() {
         let mat = Matrix::from_vec(3, 3, vec![2., 7., 1., 3., -2., 0., 1., 5., 3.]);
-        dbg!(&mat);
         let (l, u) = mat.lu_decomposition();
-        dbg!(&l);
-        dbg!(&u);
-        dbg!(l * u);
+        let lu = l.clone() * u.clone();
+
+        assert_eq!(
+            l,
+            Matrix::from_vec(3, 3, vec![1., 0., 0., 1.5, 1., 0., 0.5, -0.12, 1.])
+        );
+
+        assert_eq!(
+            u,
+            Matrix::from_vec(3, 3, vec![2., 7., 1., 0., -12.5, -1.5, 0., 0., 2.32])
+        );
+
+        assert_eq!(
+            lu,
+            Matrix::from_vec(3, 3, vec![2., 7., 1., 3., -2., 0., 1., 5., 3.])
+        );
+    }
+
+    #[test]
+    fn can_norm_matrix() {
+        let mat = Matrix::from_vec(2, 2, vec![1., -7., -2., -3.]);
+        assert_eq!(mat.norm(), (63_f32).sqrt())
     }
 }
