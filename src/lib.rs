@@ -1,59 +1,82 @@
-use std::{marker::PhantomData, ops::Index};
+use std::ops::{Index, IndexMut};
 
-/// A representation of a multi-dimensional vector.
-struct Matrix {
+/// Represents a row of a matrix.
+#[derive(Debug)]
+pub struct Row {
     data: Vec<f32>,
+}
+
+impl Row {
+    fn new(data: Vec<f32>) -> Self {
+        Self { data }
+    }
+}
+
+impl Index<usize> for Row {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.data[index]
+    }
+}
+
+impl IndexMut<usize> for Row {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.data[index]
+    }
+}
+
+/// Represents a column of a matrix.
+#[derive(Debug)]
+pub struct Col {
+    data: Vec<f32>,
+}
+
+impl Col {
+    fn new(data: Vec<f32>) -> Self {
+        Self { data }
+    }
+}
+
+impl Index<usize> for Col {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.data[index]
+    }
+}
+
+impl IndexMut<usize> for Col {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.data[index]
+    }
+}
+
+pub struct Matrix {
+    data: Vec<Row>,
     rows: usize,
     cols: usize,
 }
 
-impl Index<(usize, usize)> for Matrix {
-    type Output = f32;
-
-    fn index(&self, index: (usize, usize)) -> &Self::Output {
-        self.data
-            .get(Self::vec_idx(index.0, index.1, self.cols))
-            .expect("IndexOutOfBounds: The index is outside the matrix's bounds")
-    }
-}
-
 impl Matrix {
-    // TODO: Add push_row/push_col funcs
-
     /// Converts to the vector index from a matrix index.
     fn vec_idx(row: usize, col: usize, num_cols: usize) -> usize {
         num_cols * row + col
     }
 
-    /// Creates a new, empty matrix with the specified size.
-    pub fn new(rows: usize, cols: usize) -> Self {
-        // Input validation
-        {
-            if rows == 0 || cols == 0 {
-                panic!("InvalidSize: The matrix must have more than zero rows and columns")
-            }
-        }
-
-        Self {
-            data: Vec::with_capacity(rows * cols),
-            rows,
-            cols,
-        }
-    }
-
-    /// Creates a matrix of the specified size with elements from the given vector.
+    /// Creates a matrix of the specified size with elements from the given slice.
     ///
     /// # Panics
     /// * Panics if the number of rows or columns is zero.
-    /// * Panics if the length of the vector is not equal to `num_cols * num_rows`.
-    pub fn from_vec(rows: usize, cols: usize, data: Vec<f32>) -> Self {
+    /// * Panics if the length of the slice is not equal to `cols * rows`.
+    pub fn from_slice(rows: usize, cols: usize, v: &[f32]) -> Self {
         // Input validation
         {
             if rows == 0 || cols == 0 {
                 panic!("InvalidSize: The matrix must have more than zero rows and columns")
             }
 
-            if data.len() != rows * cols {
+            if v.len() != rows * cols {
                 panic!(
                     "InvalidVector: The length of the vector must be {}",
                     rows * cols
@@ -61,6 +84,14 @@ impl Matrix {
             }
         }
 
+        let mut data = vec![];
+        for i in 0..rows {
+            let mut row = Row::new(vec![]);
+            for j in 0..cols {
+                row.data.push(v[Self::vec_idx(i, j, cols)]);
+            }
+            data.push(row);
+        }
         Self { data, rows, cols }
     }
 
@@ -69,18 +100,7 @@ impl Matrix {
     /// # Panics
     /// * Panics if the number of rows or columns is zero.
     pub fn with_value(rows: usize, cols: usize, default_value: f32) -> Self {
-        // Input validation
-        {
-            if rows == 0 || cols == 0 {
-                panic!("InvalidSize: The matrix must have more than zero rows and columns")
-            }
-        }
-
-        Self {
-            data: vec![default_value; rows * cols],
-            rows,
-            cols,
-        }
+        Self::from_slice(rows, cols, &vec![default_value; rows * cols])
     }
 
     /// Creates an identity matrix of the specified size.
@@ -88,22 +108,15 @@ impl Matrix {
     /// # Panics
     /// * Panics if the size is zero.
     pub fn identity(size: usize) -> Self {
-        // Input validation
-        {
-            if size == 0 {
-                panic!("InvalidSize: The matrix size must be greater than zero")
-            }
-        }
-
-        let mut out = Self::from_vec(size, size, vec![0.0; size * size]);
+        let mut mat = Self::with_value(size, size, 0.0);
         for i in 0..size {
             for j in 0..size {
                 if i == j {
-                    out.data[Self::vec_idx(i, j, out.cols)] = 1.0;
+                    mat[i][j] = 1.0;
                 }
             }
         }
-        out
+        mat
     }
 
     /// Creates a matrix of the specified size, filled with `0`.
@@ -111,18 +124,7 @@ impl Matrix {
     /// # Panics
     /// * Panics if the number of rows or columns is zero.
     pub fn zeros(rows: usize, cols: usize) -> Self {
-        // Input validation
-        {
-            if rows == 0 || cols == 0 {
-                panic!("InvalidSize: The matrix must have more than zero rows and columns")
-            }
-        }
-
-        Self {
-            data: vec![0.0; rows * cols],
-            rows,
-            cols,
-        }
+        Self::with_value(rows, cols, 0.0)
     }
 
     /// Creates a matrix of the specified size, filled with `1`.
@@ -130,61 +132,62 @@ impl Matrix {
     /// # Panics
     /// * Panics if the number of rows or columns is zero.
     pub fn ones(rows: usize, cols: usize) -> Self {
-        // Input validation
-        {
-            if rows == 0 || cols == 0 {
-                panic!("InvalidSize: The matrix must have more than zero rows and columns")
-            }
-        }
-
-        Self {
-            data: vec![0.0; rows * cols],
-            rows,
-            cols,
-        }
+        Self::with_value(rows, cols, 1.0)
     }
 
     /// Returns the specified row of the matrix.
-    pub fn row<'a>(&'a self, idx: usize) -> Row<'a> {
-        Row::new(self, idx)
+    pub fn row(&self, idx: usize) -> &Row {
+        &self[idx]
     }
 
     /// Returns the specified column of the matrix.
-    pub fn col<'a>(&'a self, idx: usize) -> Col<'a> {
-        Col::new(self, idx)
+    pub fn col(&self, idx: usize) -> Col {
+        let mut data = vec![];
+        for row in &self.data {
+            data.push(row[idx]);
+        }
+        Col::new(data)
     }
 }
 
-/// Represents a row of a matrix.
-struct Row<'a> {
-    mat: &'a Matrix,
-    idx: usize,
-    len: usize,
-}
+impl Index<usize> for Matrix {
+    type Output = Row;
 
-impl<'a> Row<'a> {
-    fn new(mat: &'a Matrix, idx: usize) -> Self {
-        Self {
-            mat,
-            idx,
-            len: mat.cols,
-        }
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.data[index]
     }
 }
 
-/// Represents a column of a matrix.
-struct Col<'a> {
-    mat: &'a Matrix,
-    idx: usize,
-    len: usize,
+impl IndexMut<usize> for Matrix {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.data[index]
+    }
 }
 
-impl<'a> Col<'a> {
-    fn new(mat: &'a Matrix, idx: usize) -> Self {
-        Col {
-            mat,
-            idx,
-            len: mat.rows,
+impl std::fmt::Debug for Matrix {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("Matrix ({} x {}) \n[", self.rows, self.cols))?;
+        for i in 0..self.rows {
+            f.write_str("\t\n")?;
+            for j in 0..self.cols {
+                f.write_fmt(format_args!(" {} ", self[i][j]))?;
+            }
         }
+        f.write_str("\n]")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn create_from_slice() {
+        let v = vec![1., 2., 3., 4., 5., 6.];
+        let mat = Matrix::from_slice(2, 3, &v);
+        dbg!(&mat);
+        dbg!(&mat.row(0));
+        dbg!(&mat.col(0));
     }
 }
