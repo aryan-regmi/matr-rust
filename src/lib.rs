@@ -314,6 +314,28 @@ impl Matrix {
         num_cols * row + col
     }
 
+    /// Creates a new, empty matrix.
+    pub fn new() -> Self {
+        Self {
+            data: vec![],
+            rows: 0,
+            cols: 0,
+        }
+    }
+
+    /// Creates a new, empty matrix with capacity for the specified size.
+    pub fn with_capacity(rows: usize, cols: usize) -> Self {
+        let mut data = Vec::with_capacity(rows);
+        for _ in 0..rows {
+            data.push(Row::new(Vec::with_capacity(cols)));
+        }
+        Self {
+            data,
+            rows: 0,
+            cols: 0,
+        }
+    }
+
     /// Creates a matrix from the vector of rows.
     ///
     /// # Panics
@@ -407,6 +429,21 @@ impl Matrix {
     /// * Panics if the number of rows or columns is zero.
     pub fn ones(rows: usize, cols: usize) -> Self {
         Self::with_value(rows, cols, 1.0)
+    }
+
+    /// Returns the size of the matrix: `(row, col)`.
+    pub fn size(&self) -> (usize, usize) {
+        (self.rows, self.cols)
+    }
+
+    /// Returns the number of rows in the matrix.
+    pub fn num_rows(&self) -> usize {
+        self.rows
+    }
+
+    /// Returns the number of columns in the matrix.
+    pub fn num_cols(&self) -> usize {
+        self.cols
     }
 
     /// Returns the specified row of the matrix.
@@ -564,13 +601,19 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
-    fn create_from_slice() {
+    // #[ignore]
+    fn create_new() {
         let v = vec![1., 2., 3., 4., 5., 6.];
         let mat = Matrix::from_slice(2, 3, &v);
         dbg!(&mat);
         dbg!(&mat.row(0));
         dbg!(&mat.col(0));
+
+        let mat = Matrix::new();
+        dbg!(mat);
+
+        let mat = Matrix::with_capacity(3, 2);
+        dbg!(mat);
     }
 
     #[test]
