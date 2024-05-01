@@ -1,6 +1,9 @@
 use std::ops::{Index, IndexMut, Mul};
 
 // TODO: Make it work with all floats!
+//
+// TODO: Add Div, Add, Sub operators!
+//  - Should happen per element (don't use `solve` method for `Div`)
 
 /// Represents a row of a matrix.
 #[derive(Debug, Clone, PartialEq)]
@@ -419,6 +422,46 @@ impl Matrix {
         }
         Col::new(data)
     }
+
+    /// Multiply each element of the row by a scalar.
+    pub fn scale(&mut self, scalar: f32) {
+        for val in &mut self.data {
+            val.scale(scalar);
+        }
+    }
+
+    /// Multiplies `self` with the given column.
+    pub fn mul_col(&self, other: &Col) -> Col {
+        // Input validation
+        if self.cols != other.data.len() {
+            panic!(
+                "InvalidShape: `other` must have the same length as `self`'s columns ({})",
+                self.data.len()
+            )
+        }
+
+        let mut row_data = vec![];
+        for row in &self.data {
+            row_data.push(row * other);
+        }
+        Col::new(row_data)
+    }
+
+    /// Performs matrix multiplication of `self` and `other`.
+    pub fn mul_mat(&self, other: &Self) -> Self {
+        let mut rows = vec![];
+        for row in &self.data {
+            rows.push(row * other);
+        }
+
+        Self {
+            data: rows,
+            rows: self.rows,
+            cols: other.cols,
+        }
+    }
+
+    // TODO: Add push_row/col funcs (add `new` & `with_capacity` funcs to create empty matricies)
 }
 
 impl Index<usize> for Matrix {
@@ -445,6 +488,74 @@ impl std::fmt::Debug for Matrix {
             }
         }
         f.write_str("\n]")
+    }
+}
+
+impl Mul<Matrix> for f32 {
+    type Output = Matrix;
+
+    fn mul(self, mut rhs: Matrix) -> Self::Output {
+        rhs.scale(self);
+        rhs
+    }
+}
+
+impl<'a> Mul<&'a mut Matrix> for f32 {
+    type Output = &'a mut Matrix;
+
+    fn mul(self, rhs: &'a mut Matrix) -> Self::Output {
+        rhs.scale(self);
+        rhs
+    }
+}
+
+impl Mul<f32> for Matrix {
+    type Output = Self;
+
+    fn mul(mut self, rhs: f32) -> Self::Output {
+        self.scale(rhs);
+        self
+    }
+}
+
+impl Mul<f32> for &mut Matrix {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        self.scale(rhs);
+        self
+    }
+}
+
+impl Mul<Col> for Matrix {
+    type Output = Col;
+
+    fn mul(self, rhs: Col) -> Self::Output {
+        self.mul_col(&rhs)
+    }
+}
+
+impl Mul<&Col> for &Matrix {
+    type Output = Col;
+
+    fn mul(self, rhs: &Col) -> Self::Output {
+        self.mul_col(rhs)
+    }
+}
+
+impl Mul<Matrix> for Matrix {
+    type Output = Self;
+
+    fn mul(self, rhs: Matrix) -> Self::Output {
+        self.mul_mat(&rhs)
+    }
+}
+
+impl Mul<&Matrix> for &Matrix {
+    type Output = Matrix;
+
+    fn mul(self, rhs: &Matrix) -> Self::Output {
+        self.mul_mat(rhs)
     }
 }
 
@@ -514,6 +625,35 @@ mod tests {
                 prod,
                 Matrix::from_slice(3, 3, &vec![1., 2., 3., 2., 4., 6., 3., 6., 9.])
             );
+        }
+    }
+
+    #[test]
+    fn mul_mat() {
+        let mat = Matrix::from_slice(3, 2, &vec![1., 2., 3., 4., 5., 6.]);
+
+        // Scale
+        {
+            let scaled = mat.clone() * 2_f32;
+            assert_eq!(
+                scaled,
+                Matrix::from_slice(3, 2, &vec![2., 4., 6., 8., 10., 12.])
+            );
+        }
+
+        // Multiply Matrix
+        {
+            let prod = &mat * &Matrix::from_slice(2, 3, &vec![1., 2., 3., 4., 5., 6.]);
+            assert_eq!(
+                prod,
+                Matrix::from_slice(3, 3, &vec![9., 12., 15., 19., 26., 33., 29., 40., 51.])
+            );
+        }
+
+        // Multiply Col
+        {
+            let col = &mat * &Col::new(vec![1., 2.]);
+            assert_eq!(col, Col::new(vec![5., 11., 17.]));
         }
     }
 }
