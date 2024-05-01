@@ -672,15 +672,15 @@ mod tests {
     use super::*;
 
     #[test]
-    // #[ignore]
+    #[ignore]
     fn create_new() {
-        // let v = vec![1., 2., 3., 4., 5., 6.];
-        // let mat = Matrix::from_slice(2, 3, &v);
-        // dbg!(mat);
-        //
-        // let mut mat = Matrix::new();
-        // mat.push_row(Row::new(vec![1., 2., 3.]));
-        // dbg!(mat);
+        let v = vec![1., 2., 3., 4., 5., 6.];
+        let mat = Matrix::from_slice(2, 3, &v);
+        dbg!(mat);
+
+        let mut mat = Matrix::new();
+        mat.push_row(Row::new(vec![1., 2., 3.]));
+        dbg!(mat);
 
         let mut mat = Matrix::with_capacity(3);
         mat.push_row(Row::new(vec![1., 2., 3.]));
