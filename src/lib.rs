@@ -17,10 +17,12 @@ impl Row {
     }
 
     /// Multiply each element of the row by a scalar.
-    pub fn scale(&mut self, scalar: f32) {
-        for val in &mut self.data {
-            *val = *val * scalar;
+    pub fn scale(&self, scalar: f32) -> Self {
+        let mut scaled = vec![];
+        for val in &self.data {
+            scaled.push(*val * scalar);
         }
+        Self { data: scaled }
     }
 
     /// Calculates the dot prodcut of `self` and `other`.
@@ -77,6 +79,15 @@ impl Row {
         }
         Self { data }
     }
+
+    /// Divides the scalar by each element in the row.
+    pub fn div_scalar(&mut self, scalar: f32) -> Self {
+        let mut scaled = vec![];
+        for elem in &mut self.data {
+            scaled.push(scalar / (*elem));
+        }
+        Self { data: scaled }
+    }
 }
 
 impl Index<usize> for Row {
@@ -100,51 +111,38 @@ impl std::fmt::Debug for Row {
             f.write_fmt(format_args!(" {:?} ", val))?;
         }
         f.write_str(" ]")
-        // f.write_fmt(format_args!("Matrix ({} x {}) \n[", self.rows, self.cols))?;
-        // for i in 0..self.rows {
-        //     f.write_str("\t\n")?;
-        //     f.write_fmt(format_args!(" {:?} ", self[i]))?;
-        //     // for j in 0..self.cols {
-        //     //     f.write_fmt(format_args!(" {} ", self[i][j]))?;
-        //     // }
-        // }
-        // f.write_str("\n]")
     }
 }
 
 impl Mul<f32> for Row {
     type Output = Self;
 
-    fn mul(mut self, rhs: f32) -> Self::Output {
-        self.scale(rhs);
-        self
+    fn mul(self, rhs: f32) -> Self::Output {
+        self.scale(rhs)
+    }
+}
+
+impl Mul<f32> for &Row {
+    type Output = Row;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        self.scale(rhs)
     }
 }
 
 impl Mul<Row> for f32 {
     type Output = Row;
 
-    fn mul(self, mut rhs: Row) -> Self::Output {
-        rhs.scale(self);
-        rhs
+    fn mul(self, rhs: Row) -> Self::Output {
+        rhs.scale(self)
     }
 }
 
-impl Mul<f32> for &mut Row {
-    type Output = Self;
+impl Mul<&Row> for f32 {
+    type Output = Row;
 
-    fn mul(self, rhs: f32) -> Self::Output {
-        self.scale(rhs);
-        self
-    }
-}
-
-impl<'a> Mul<&'a mut Row> for f32 {
-    type Output = &'a Row;
-
-    fn mul(self, rhs: &'a mut Row) -> Self::Output {
-        rhs.scale(self);
-        rhs
+    fn mul(self, rhs: &Row) -> Self::Output {
+        rhs.scale(self)
     }
 }
 
@@ -208,10 +206,12 @@ impl Col {
     }
 
     /// Multiply each element of the row by a scalar.
-    pub fn scale(&mut self, scalar: f32) {
+    pub fn scale(&mut self, scalar: f32) -> Self {
+        let mut scaled = vec![];
         for val in &mut self.data {
-            *val = *val * scalar;
+            scaled.push(*val * scalar);
         }
+        Self { data: scaled }
     }
 
     // /// Calculates the dot prodcut of `self` and `other`.
@@ -277,8 +277,7 @@ impl Mul<f32> for Col {
     type Output = Self;
 
     fn mul(mut self, rhs: f32) -> Self::Output {
-        self.scale(rhs);
-        self
+        self.scale(rhs)
     }
 }
 
@@ -286,17 +285,15 @@ impl Mul<Col> for f32 {
     type Output = Col;
 
     fn mul(self, mut rhs: Col) -> Self::Output {
-        rhs.scale(self);
-        rhs
+        rhs.scale(self)
     }
 }
 
 impl Mul<f32> for &mut Col {
-    type Output = Self;
+    type Output = Col;
 
     fn mul(self, rhs: f32) -> Self::Output {
-        self.scale(rhs);
-        self
+        self.scale(rhs)
     }
 }
 
@@ -501,9 +498,15 @@ impl Matrix {
     }
 
     /// Multiply each element of the row by a scalar.
-    pub fn scale(&mut self, scalar: f32) {
-        for val in &mut self.data {
-            val.scale(scalar);
+    pub fn scale(&self, scalar: f32) -> Self {
+        let mut scaled_rows = vec![];
+        for val in &self.data {
+            scaled_rows.push(val.scale(scalar));
+        }
+        Self {
+            data: scaled_rows,
+            rows: self.rows,
+            cols: self.cols,
         }
     }
 
@@ -602,36 +605,32 @@ impl std::fmt::Debug for Matrix {
 impl Mul<Matrix> for f32 {
     type Output = Matrix;
 
-    fn mul(self, mut rhs: Matrix) -> Self::Output {
-        rhs.scale(self);
-        rhs
+    fn mul(self, rhs: Matrix) -> Self::Output {
+        rhs.scale(self)
     }
 }
 
-impl<'a> Mul<&'a mut Matrix> for f32 {
-    type Output = &'a mut Matrix;
+impl Mul<&Matrix> for f32 {
+    type Output = Matrix;
 
-    fn mul(self, rhs: &'a mut Matrix) -> Self::Output {
-        rhs.scale(self);
-        rhs
+    fn mul(self, rhs: &Matrix) -> Self::Output {
+        rhs.scale(self)
     }
 }
 
 impl Mul<f32> for Matrix {
     type Output = Self;
 
-    fn mul(mut self, rhs: f32) -> Self::Output {
-        self.scale(rhs);
-        self
+    fn mul(self, rhs: f32) -> Self::Output {
+        self.scale(rhs)
     }
 }
 
-impl Mul<f32> for &mut Matrix {
-    type Output = Self;
+impl Mul<f32> for &Matrix {
+    type Output = Matrix;
 
     fn mul(self, rhs: f32) -> Self::Output {
-        self.scale(rhs);
-        self
+        self.scale(rhs)
     }
 }
 
