@@ -5,14 +5,16 @@ use std::ops::{Index, IndexMut, Mul};
 // TODO: Add Div, Add, Sub operators!
 //  - Should happen per element (don't use `solve` method for `Div`)
 
+// TODO: Create elem struct to replace vec type? (Fix mut index creating invalid matrix)
+
 /// Represents a row of a matrix.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Row {
     data: Vec<f32>,
 }
 
 impl Row {
-    fn new(data: Vec<f32>) -> Self {
+    pub fn new(data: Vec<f32>) -> Self {
         Self { data }
     }
 
@@ -90,6 +92,25 @@ impl Index<usize> for Row {
 impl IndexMut<usize> for Row {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.data[index]
+    }
+}
+
+impl std::fmt::Debug for Row {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[ ")?;
+        for val in &self.data {
+            f.write_fmt(format_args!(" {:?} ", val))?;
+        }
+        f.write_str(" ]")
+        // f.write_fmt(format_args!("Matrix ({} x {}) \n[", self.rows, self.cols))?;
+        // for i in 0..self.rows {
+        //     f.write_str("\t\n")?;
+        //     f.write_fmt(format_args!(" {:?} ", self[i]))?;
+        //     // for j in 0..self.cols {
+        //     //     f.write_fmt(format_args!(" {} ", self[i][j]))?;
+        //     // }
+        // }
+        // f.write_str("\n]")
     }
 }
 
@@ -178,13 +199,13 @@ impl<'a> Mul<&'a Matrix> for &'a Row {
 }
 
 /// Represents a column of a matrix.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Col {
     data: Vec<f32>,
 }
 
 impl Col {
-    fn new(data: Vec<f32>) -> Self {
+    pub fn new(data: Vec<f32>) -> Self {
         Self { data }
     }
 
@@ -241,6 +262,16 @@ impl Index<usize> for Col {
 impl IndexMut<usize> for Col {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.data[index]
+    }
+}
+
+impl std::fmt::Debug for Col {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[\n")?;
+        for val in &self.data {
+            f.write_fmt(format_args!(" {:?}\n", val))?;
+        }
+        f.write_str("]")
     }
 }
 
@@ -323,12 +354,12 @@ impl Matrix {
         }
     }
 
-    /// Creates a new, empty matrix with capacity for the specified size.
-    pub fn with_capacity(rows: usize, cols: usize) -> Self {
-        let mut data = Vec::with_capacity(rows);
-        for _ in 0..rows {
-            data.push(Row::new(Vec::with_capacity(cols)));
-        }
+    /// Creates a new, empty matrix with capacity for the specified number of rows.
+    ///
+    /// # Note
+    /// It is currently impossible to specify the capacity for columns.
+    pub fn with_capacity(rows: usize) -> Self {
+        let data = Vec::with_capacity(rows);
         Self {
             data,
             rows: 0,
@@ -498,7 +529,41 @@ impl Matrix {
         }
     }
 
-    // TODO: Add push_row/col funcs (add `new` & `with_capacity` funcs to create empty matricies)
+    /// Pushes the given row to the end of the matrix.
+    pub fn push_row(&mut self, row: Row) {
+        // Input validation
+        {
+            if self.cols == 0 {
+                self.cols = row.data.len();
+            } else {
+                if row.data.len() != self.cols {
+                    panic!("InvalidRow: The row must have {} elements", self.cols)
+                }
+            }
+        }
+
+        self.data.push(row);
+        self.rows += 1;
+    }
+
+    /// Pushes the given column to the end of the matrix.
+    pub fn push_col(&mut self, col: Col) {
+        // Input validation
+        {
+            if self.rows == 0 {
+                self.rows = col.data.len();
+            } else {
+                if col.data.len() != self.rows {
+                    panic!("InvalidRow: The row must have {} elements", self.cols)
+                }
+            }
+        }
+
+        for (i, row) in self.data.iter_mut().enumerate() {
+            row.data.push(col[i]);
+        }
+        self.cols += 1;
+    }
 }
 
 impl Index<usize> for Matrix {
@@ -517,14 +582,11 @@ impl IndexMut<usize> for Matrix {
 
 impl std::fmt::Debug for Matrix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("Matrix ({} x {}) \n[", self.rows, self.cols))?;
-        for i in 0..self.rows {
-            f.write_str("\t\n")?;
-            for j in 0..self.cols {
-                f.write_fmt(format_args!(" {} ", self[i][j]))?;
-            }
+        f.write_fmt(format_args!("Matrix ({} x {}) [\n", self.rows, self.cols))?;
+        for row in &self.data {
+            f.write_fmt(format_args!("\t{:?}\n", row))?;
         }
-        f.write_str("\n]")
+        f.write_str("]")
     }
 }
 
@@ -603,17 +665,21 @@ mod tests {
     #[test]
     // #[ignore]
     fn create_new() {
-        let v = vec![1., 2., 3., 4., 5., 6.];
-        let mat = Matrix::from_slice(2, 3, &v);
+        // let v = vec![1., 2., 3., 4., 5., 6.];
+        // let mat = Matrix::from_slice(2, 3, &v);
+        // dbg!(mat);
+        //
+        // let mut mat = Matrix::new();
+        // mat.push_row(Row::new(vec![1., 2., 3.]));
+        // dbg!(mat);
+
+        let mut mat = Matrix::with_capacity(3);
+        mat.push_row(Row::new(vec![1., 2., 3.]));
+        mat.push_row(Row::new(vec![4., 5., 6.]));
+        mat.push_col(Col::new(vec![7., 8.]));
         dbg!(&mat);
-        dbg!(&mat.row(0));
-        dbg!(&mat.col(0));
-
-        let mat = Matrix::new();
-        dbg!(mat);
-
-        let mat = Matrix::with_capacity(3, 2);
-        dbg!(mat);
+        mat[1] = Row::new(vec![0., 0., 0.]);
+        dbg!(&mat);
     }
 
     #[test]
