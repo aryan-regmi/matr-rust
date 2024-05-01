@@ -5,8 +5,6 @@ use std::ops::{Index, IndexMut, Mul};
 // TODO: Add Div, Add, Sub operators!
 //  - Should happen per element (don't use `solve` method for `Div`)
 
-// TODO: Create elem struct to replace vec type? (Fix mut index creating invalid matrix)
-
 /// Represents a row of a matrix.
 #[derive(Clone, PartialEq)]
 pub struct Row {
@@ -332,6 +330,17 @@ impl Mul<&Col> for &Col {
     }
 }
 
+/// Represents a multi-dimensional matrix.
+///
+/// # Safety
+/// When mutably accessing rows of the matrix, care must be taken to ensure that the length of any
+/// modified row equals the number of rows in the matrix; otherwise, an invalid matrix will be
+/// created:
+///
+/// ```rust
+/// let mut mat = Matrix::from_slice(2,2 &[1., 2., 3., 4.]);
+/// mat[1] = Row::new(vec![0., 0., 0.]); // More columns in this row than the matrix
+/// ```
 #[derive(Clone, PartialEq)]
 pub struct Matrix {
     data: Vec<Row>,
@@ -678,7 +687,7 @@ mod tests {
         mat.push_row(Row::new(vec![4., 5., 6.]));
         mat.push_col(Col::new(vec![7., 8.]));
         dbg!(&mat);
-        mat[1] = Row::new(vec![0., 0., 0.]);
+        mat[1] = Row::new(vec![0., 0., 0., 0.]);
         dbg!(&mat);
     }
 
