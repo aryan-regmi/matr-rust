@@ -1,13 +1,76 @@
-use std::ops::{Index, IndexMut};
+use core::panic;
+use std::ops::{Index, IndexMut, Mul};
 
 /// Represents a row of a matrix.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Row {
     data: Vec<f32>,
 }
 
 impl Row {
     fn new(data: Vec<f32>) -> Self {
+        Self { data }
+    }
+
+    /// Multiply each element of the row by a scalar.
+    pub fn scale(&mut self, scalar: f32) {
+        for val in &mut self.data {
+            *val = *val * scalar;
+        }
+    }
+
+    /// Calculates the dot prodcut of `self` and `other`.
+    pub fn dot(&self, other: &Self) -> f32 {
+        // Input validation
+        if self.data.len() != other.data.len() {
+            panic!(
+                "InvalidShape: `other` must have the same length as `self` ({})",
+                self.data.len()
+            )
+        }
+
+        let mut sum = 0.0;
+        for i in 0..self.data.len() {
+            sum += self[i] * other[i];
+        }
+        sum
+    }
+
+    /// Multiplies `self` with the given column.
+    pub fn mul_col(&self, other: &Col) -> f32 {
+        // Input validation
+        if self.data.len() != other.data.len() {
+            panic!(
+                "InvalidShape: `other` must have the same length as `self` ({})",
+                self.data.len()
+            )
+        }
+
+        let mut sum = 0.0;
+        for i in 0..self.data.len() {
+            sum += self[i] * other[i];
+        }
+        sum
+    }
+
+    /// Multiplies `self` with the given matrix.
+    pub fn mul_mat(&self, other: &Matrix) -> Self {
+        // Input validation
+        if self.data.len() != other.rows {
+            panic!(
+                "InvalidShape: `other` must have the same number of rows as `self` ({})",
+                self.data.len()
+            )
+        }
+
+        let mut data = vec![];
+        for j in 0..other.cols {
+            let mut sum = 0.0;
+            for i in 0..other.rows {
+                sum += self[i] * other[i][j];
+            }
+            data.push(sum);
+        }
         Self { data }
     }
 }
@@ -26,6 +89,90 @@ impl IndexMut<usize> for Row {
     }
 }
 
+impl Mul<f32> for Row {
+    type Output = Self;
+
+    fn mul(mut self, rhs: f32) -> Self::Output {
+        self.scale(rhs);
+        self
+    }
+}
+
+impl Mul<Row> for f32 {
+    type Output = Row;
+
+    fn mul(self, mut rhs: Row) -> Self::Output {
+        rhs.scale(self);
+        rhs
+    }
+}
+
+impl Mul<f32> for &mut Row {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        self.scale(rhs);
+        self
+    }
+}
+
+impl<'a> Mul<&'a mut Row> for f32 {
+    type Output = &'a Row;
+
+    fn mul(self, rhs: &'a mut Row) -> Self::Output {
+        rhs.scale(self);
+        rhs
+    }
+}
+
+impl Mul<Row> for Row {
+    type Output = f32;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        self.dot(&rhs)
+    }
+}
+
+impl<'a> Mul<&'a Row> for &'a Row {
+    type Output = f32;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        self.dot(&rhs)
+    }
+}
+
+impl Mul<Col> for Row {
+    type Output = f32;
+
+    fn mul(self, rhs: Col) -> Self::Output {
+        self.mul_col(&rhs)
+    }
+}
+
+impl<'a> Mul<&'a Col> for &'a Row {
+    type Output = f32;
+
+    fn mul(self, rhs: &Col) -> Self::Output {
+        self.mul_col(&rhs)
+    }
+}
+
+impl Mul<Matrix> for Row {
+    type Output = Self;
+
+    fn mul(self, rhs: Matrix) -> Self::Output {
+        self.mul_mat(&rhs)
+    }
+}
+
+impl<'a> Mul<&'a Matrix> for &'a Row {
+    type Output = Row;
+
+    fn mul(self, rhs: &Matrix) -> Self::Output {
+        self.mul_mat(&rhs)
+    }
+}
+
 /// Represents a column of a matrix.
 #[derive(Debug)]
 pub struct Col {
@@ -35,6 +182,56 @@ pub struct Col {
 impl Col {
     fn new(data: Vec<f32>) -> Self {
         Self { data }
+    }
+
+    /// Multiply each element of the row by a scalar.
+    pub fn scale(&mut self, scalar: f32) {
+        for val in &mut self.data {
+            *val = *val * scalar;
+        }
+    }
+
+    // /// Calculates the dot prodcut of `self` and `other`.
+    pub fn dot(&self, other: &Self) -> f32 {
+        //     // Input validation
+        //     if self.data.len() != other.data.len() {
+        //         panic!(
+        //             "InvalidShape: `other` must have the same length as `self` ({})",
+        //             self.data.len()
+        //         )
+        //     }
+        //
+        //     let mut sum = 0.0;
+        //     for i in 0..self.data.len() {
+        //         sum += self[i] * other[i];
+        //     }
+        //     sum
+        todo!()
+    }
+
+    /// Multiplies `self` with the given row.
+    pub fn mul_row(&self, other: &Row) -> Matrix {
+        let m = self.data.len();
+        let n = other.data.len();
+
+        let mut rows = vec![];
+        for i in 0..m {
+            let mut row = Row::new(vec![]);
+            for j in 0..n {
+                row.data.push(self[i] * other[j]);
+            }
+            rows.push(row);
+        }
+
+        // Matrix::borrow
+
+        todo!()
+
+        // let mut sum = 0.0;
+        // for i in 0..self.data.len() {
+        //     sum += self[i] * other[i];
+        // }
+        // sum
     }
 }
 
@@ -52,6 +249,33 @@ impl IndexMut<usize> for Col {
     }
 }
 
+impl Mul<f32> for Col {
+    type Output = Self;
+
+    fn mul(mut self, rhs: f32) -> Self::Output {
+        self.scale(rhs);
+        self
+    }
+}
+
+impl Mul<Col> for f32 {
+    type Output = Col;
+
+    fn mul(self, mut rhs: Col) -> Self::Output {
+        rhs.scale(self);
+        rhs
+    }
+}
+
+impl Mul<f32> for &mut Col {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        self.scale(rhs);
+        self
+    }
+}
+
 pub struct Matrix {
     data: Vec<Row>,
     rows: usize,
@@ -62,6 +286,22 @@ impl Matrix {
     /// Converts to the vector index from a matrix index.
     fn vec_idx(row: usize, col: usize, num_cols: usize) -> usize {
         num_cols * row + col
+    }
+
+    pub fn from_rows(row_vec: Vec<Row>) -> Self {
+        let m = row_vec.len();
+        let n = row_vec[0].data.len();
+
+        // Input validation
+        {
+            for (i, row) in row_vec.iter().enumerate() {
+                if row.data.len() != n {
+                    panic!("InvalidRows: All rows must have the same number of elements ({}), but row {} in the given vector has {} elements", n, i,row.data.len())
+                }
+            }
+        }
+
+        todo!()
     }
 
     /// Creates a matrix of the specified size with elements from the given slice.
@@ -189,5 +429,34 @@ mod tests {
         dbg!(&mat);
         dbg!(&mat.row(0));
         dbg!(&mat.col(0));
+    }
+
+    #[test]
+    fn mul_row() {
+        let row = Row::new(vec![1., 2., 3.]);
+
+        // Scale
+        {
+            let scaled = row.clone() * 2_f32;
+            assert_eq!(scaled, Row::new(vec![2., 4., 6.]));
+        }
+
+        // Dot product
+        {
+            let dot = &row * &row;
+            assert_eq!(dot, 14.);
+        }
+
+        // Multiply Column
+        {
+            let dot = &row * &Col::new(vec![1., 2., 3.]);
+            assert_eq!(dot, 14.);
+        }
+
+        // Multiply Matrix
+        {
+            let prod = &row * &Matrix::from_slice(3, 2, &vec![1., 4., 2., 5., 3., 6.]);
+            assert_eq!(prod, Row::new(vec![14., 32.]));
+        }
     }
 }
