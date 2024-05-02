@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut, Mul};
+use std::ops::{Div, Index, IndexMut, Mul};
 
 // TODO: Make it work with all floats!
 //
@@ -81,9 +81,9 @@ impl Row {
     }
 
     /// Divides the scalar by each element in the row.
-    pub fn div_scalar(&mut self, scalar: f32) -> Self {
+    pub fn div_scalar(&self, scalar: f32) -> Self {
         let mut scaled = vec![];
-        for elem in &mut self.data {
+        for elem in &self.data {
             scaled.push(scalar / (*elem));
         }
         Self { data: scaled }
@@ -194,6 +194,46 @@ impl<'a> Mul<&'a Matrix> for &'a Row {
     }
 }
 
+impl Div<f32> for Row {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        self.scale(1. / rhs)
+    }
+}
+
+impl Div<f32> for &Row {
+    type Output = Row;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        self.scale(1. / rhs)
+    }
+}
+
+impl Div<Row> for f32 {
+    type Output = Row;
+
+    fn div(self, rhs: Row) -> Self::Output {
+        rhs.div_scalar(self)
+    }
+}
+
+impl Div<&Row> for f32 {
+    type Output = Row;
+
+    fn div(self, rhs: &Row) -> Self::Output {
+        rhs.div_scalar(self)
+    }
+}
+
+impl Div<Row> for Row {
+    type Output = f32;
+
+    fn div(self, rhs: Row) -> Self::Output {
+        self * (1.0 / rhs)
+    }
+}
+
 /// Represents a column of a matrix.
 #[derive(Clone, PartialEq)]
 pub struct Col {
@@ -246,6 +286,15 @@ impl Col {
         }
 
         Matrix::from_rows(rows)
+    }
+
+    /// Divides the scalar by each element in the column.
+    pub fn div_scalar(&self, scalar: f32) -> Self {
+        let mut scaled = vec![];
+        for elem in &self.data {
+            scaled.push(scalar / (*elem));
+        }
+        Self { data: scaled }
     }
 }
 
@@ -538,6 +587,19 @@ impl Matrix {
             data: rows,
             rows: self.rows,
             cols: other.cols,
+        }
+    }
+
+    /// Divides the scalar by each element in the column.
+    pub fn div_scalar(&mut self, scalar: f32) -> Self {
+        let mut scaled = vec![];
+        for row in &self.data {
+            scaled.push(row.div_scalar(scalar))
+        }
+        Self {
+            data: scaled,
+            rows: self.rows,
+            cols: self.cols,
         }
     }
 
