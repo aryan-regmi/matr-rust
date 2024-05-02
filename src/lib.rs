@@ -42,8 +42,25 @@ impl Row {
         sum
     }
 
+    /// Element wise multiplication of `self` and `other`.
+    pub fn mul_elem(&self, other: &Row) -> Self {
+        // Input validation
+        if self.data.len() != other.data.len() {
+            panic!(
+                "InvalidShape: `other` must have the same length as `self` ({})",
+                self.data.len()
+            )
+        }
+
+        let mut prod = vec![];
+        for i in 0..self.data.len() {
+            prod.push(self[i] * other[i]);
+        }
+        Row::new(prod)
+    }
+
     /// Multiplies `self` with the given column.
-    pub fn mul_col(&self, other: &Col) -> f32 {
+    fn mul_col(&self, other: &Col) -> f32 {
         // Input validation
         if self.data.len() != other.data.len() {
             panic!(
@@ -60,7 +77,7 @@ impl Row {
     }
 
     /// Multiplies `self` with the given matrix.
-    pub fn mul_mat(&self, other: &Matrix) -> Self {
+    fn mul_mat(&self, other: &Matrix) -> Self {
         // Input validation
         if self.data.len() != other.rows {
             panic!(
@@ -81,7 +98,7 @@ impl Row {
     }
 
     /// Divides the scalar by each element in the row.
-    pub fn div_scalar(&self, scalar: f32) -> Self {
+    fn div_scalar(&self, scalar: f32) -> Self {
         let mut scaled = vec![];
         for elem in &self.data {
             scaled.push(scalar / (*elem));
@@ -146,22 +163,6 @@ impl Mul<&Row> for f32 {
     }
 }
 
-impl Mul<Row> for Row {
-    type Output = f32;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        self.dot(&rhs)
-    }
-}
-
-impl<'a> Mul<&'a Row> for &'a Row {
-    type Output = f32;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        self.dot(&rhs)
-    }
-}
-
 impl Mul<Col> for Row {
     type Output = f32;
 
@@ -170,7 +171,7 @@ impl Mul<Col> for Row {
     }
 }
 
-impl<'a> Mul<&'a Col> for &'a Row {
+impl Mul<&Col> for &Row {
     type Output = f32;
 
     fn mul(self, rhs: &Col) -> Self::Output {
@@ -186,7 +187,7 @@ impl Mul<Matrix> for Row {
     }
 }
 
-impl<'a> Mul<&'a Matrix> for &'a Row {
+impl Mul<&Matrix> for &Row {
     type Output = Row;
 
     fn mul(self, rhs: &Matrix) -> Self::Output {
@@ -234,6 +235,16 @@ impl Div<Row> for Row {
     }
 }
 
+impl Div<&Row> for &Row {
+    type Output = f32;
+
+    fn div(self, rhs: &Row) -> Self::Output {
+        self * &(1.0 / rhs)
+    }
+}
+
+// TODO: Add rest of Div
+
 /// Represents a column of a matrix.
 #[derive(Clone, PartialEq)]
 pub struct Col {
@@ -246,9 +257,9 @@ impl Col {
     }
 
     /// Multiply each element of the row by a scalar.
-    pub fn scale(&mut self, scalar: f32) -> Self {
+    pub fn scale(&self, scalar: f32) -> Self {
         let mut scaled = vec![];
-        for val in &mut self.data {
+        for val in &self.data {
             scaled.push(*val * scalar);
         }
         Self { data: scaled }
@@ -325,7 +336,7 @@ impl std::fmt::Debug for Col {
 impl Mul<f32> for Col {
     type Output = Self;
 
-    fn mul(mut self, rhs: f32) -> Self::Output {
+    fn mul(self, rhs: f32) -> Self::Output {
         self.scale(rhs)
     }
 }
@@ -333,7 +344,7 @@ impl Mul<f32> for Col {
 impl Mul<Col> for f32 {
     type Output = Col;
 
-    fn mul(self, mut rhs: Col) -> Self::Output {
+    fn mul(self, rhs: Col) -> Self::Output {
         rhs.scale(self)
     }
 }
@@ -373,6 +384,38 @@ impl Mul<&Col> for &Col {
     type Output = f32;
     fn mul(self, rhs: &Col) -> Self::Output {
         self.dot(rhs)
+    }
+}
+
+impl Div<f32> for Col {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        self.scale(1. / rhs)
+    }
+}
+
+impl Div<f32> for &Col {
+    type Output = Col;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        self.scale(1. / rhs)
+    }
+}
+
+impl Div<Col> for f32 {
+    type Output = Col;
+
+    fn div(self, rhs: Col) -> Self::Output {
+        rhs.div_scalar(self)
+    }
+}
+
+impl Div<&Col> for f32 {
+    type Output = Col;
+
+    fn div(self, rhs: &Col) -> Self::Output {
+        rhs.div_scalar(self)
     }
 }
 
