@@ -5,6 +5,21 @@ use std::ops::{Div, Index, IndexMut, Mul};
 // TODO: Add Div, Add, Sub operators!
 //  - Should happen per element (don't use `solve` method for `Div`)
 
+/// Returns a matrix of size `1 x n` (row vector) with elements linearly spaced between `start` and `end`.
+pub fn linspace(start: f32, end: f32, n: usize) -> Row {
+    let h = (end - start) / (n - 1) as f32;
+    let mut x = vec![start; n];
+    for i in 1..n {
+        x[i] = x[i - 1] + h;
+    }
+
+    // Make sure vector elements are smaller than `end`
+    if x[n - 1] > end {
+        x[n - 1] = end;
+    }
+    Row { data: x }
+}
+
 /// Represents a row of a matrix.
 #[derive(Clone, PartialEq)]
 pub struct Row {
