@@ -13,8 +13,8 @@ struct Matrix {
 }
 
 impl Matrix {
-    /// Converts to the vector index from a matrix index.
-    fn vec_idx(row: usize, col: usize, num_cols: usize) -> usize {
+    /// Converts to the linear index from a matrix index.
+    pub fn vec_idx(row: usize, col: usize, num_cols: usize) -> usize {
         num_cols * row + col
     }
 
@@ -100,6 +100,11 @@ impl Matrix {
     pub fn capacity(&self) -> usize {
         self.capacity
     }
+
+    /// Sets the specified row to the given row.
+    pub fn set_row(&mut self, idx: usize, row: &[f32]) {
+        self[idx].copy_from_slice(row);
+    }
 }
 
 impl Index<usize> for Matrix {
@@ -158,7 +163,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
     fn can_create_matrices() {
         let mat = Matrix::new();
         assert_eq!(mat.size(), (0, 0));
@@ -168,7 +172,14 @@ mod tests {
         assert_eq!(mat.size(), (0, 0));
         assert_eq!(mat.capacity(), 6);
 
-        let mat = Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]);
-        dbg!(mat);
+        let elems = [1., 2., 3., 4., 5., 6.];
+        let mat = Matrix::from_slice(2, 3, &elems);
+        for i in 0..mat.nrows() {
+            for j in 0..mat.ncols() {
+                assert_eq!(mat[i][j], elems[Matrix::vec_idx(i, j, mat.ncols())])
+            }
+        }
+        assert_eq!(mat.size(), (2, 3));
+        assert_eq!(mat.capacity(), 6);
     }
 }
