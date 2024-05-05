@@ -81,6 +81,38 @@ impl Matrix {
         Self::from_slice(nrows, ncols, &vec![default_value; nrows * ncols])
     }
 
+    /// Creates an identity matrix of the specified size.
+    ///
+    /// # Panics
+    /// * Panics if the size is zero.
+    pub fn identity(size: usize) -> Self {
+        let mut mat = Self::with_value(size, size, 0.0);
+        for i in 0..size {
+            for j in 0..size {
+                if i == j {
+                    mat[i][j] = 1.0;
+                }
+            }
+        }
+        mat
+    }
+
+    /// Creates a matrix of the specified size, filled with `0`.
+    ///
+    /// # Panics
+    /// * Panics if the number of rows or columns is zero.
+    pub fn zeros(rows: usize, cols: usize) -> Self {
+        Self::with_value(rows, cols, 0.0)
+    }
+
+    /// Creates a matrix of the specified size, filled with `1`.
+    ///
+    /// # Panics
+    /// * Panics if the number of rows or columns is zero.
+    pub fn ones(rows: usize, cols: usize) -> Self {
+        Self::with_value(rows, cols, 1.0)
+    }
+
     /// Returns the number of rows in the matrix.
     pub fn nrows(&self) -> usize {
         self.nrows
@@ -104,6 +136,13 @@ impl Matrix {
     /// Sets the specified row to the given row.
     pub fn set_row(&mut self, idx: usize, row: &[f32]) {
         self[idx].copy_from_slice(row);
+    }
+
+    /// Sets the specified column to the given column.
+    pub fn set_col(&mut self, idx: usize, col: &[f32]) {
+        for i in 0..self.nrows {
+            self[i][idx] = col[i];
+        }
     }
 }
 
