@@ -5,6 +5,17 @@ use std::{
     ptr::{self, slice_from_raw_parts, slice_from_raw_parts_mut, NonNull},
 };
 
+/// Returns 1 if the value is positivie, 0 if it's zero, and -1 if it is negative.
+fn sign(val: f32) -> f32 {
+    if val == 0. {
+        0.
+    } else if val > 0. {
+        1.
+    } else {
+        -1.
+    }
+}
+
 pub struct Matrix {
     data: NonNull<f32>,
     nrows: usize,
@@ -138,6 +149,8 @@ impl Matrix {
         self.ncols
     }
 
+    // FIXME: Return new Matrix instead
+    //
     /// Returns an immutable reference to the specified row of the matrix.
     pub fn row(&self, idx: usize) -> &[f32] {
         // Input validation
@@ -155,23 +168,8 @@ impl Matrix {
         }
     }
 
-    /// Returns a mutable reference to the specified row of the matrix.
-    pub fn row_mut(&mut self, idx: usize) -> &mut [f32] {
-        // Input validation
-        if idx >= self.nrows {
-            panic!(
-                "Invalid row: The index must be less than {} (was {})",
-                self.nrows, idx
-            )
-        }
-
-        unsafe {
-            slice_from_raw_parts_mut(self.data.as_ptr().add(idx * self.ncols), self.ncols)
-                .as_mut()
-                .expect("Invalid row index")
-        }
-    }
-
+    // FIXME: Return new Matrix instead
+    //
     /// Returns an immutable reference to the specified column of the matrix.
     pub fn col(&self, idx: usize) -> Vec<&f32> {
         // Input validation
@@ -185,32 +183,6 @@ impl Matrix {
         let mut out = vec![];
         for i in 0..self.nrows {
             out.push(&self[(i, idx)])
-        }
-        out
-    }
-
-    /// Returns a mutable reference to the specified column of the matrix.
-    pub fn col_mut<'a>(&'a mut self, idx: usize) -> Vec<&'a mut f32> {
-        // Input validation
-        if idx >= self.ncols {
-            panic!(
-                "Invalid column: The index must be less than {} (was {})",
-                self.ncols, idx
-            )
-        }
-
-        let mut out = vec![];
-        let nrows = self.nrows;
-        let ncols = self.ncols;
-        for i in 0..nrows {
-            let val = unsafe {
-                self.data
-                    .as_ptr()
-                    .add(Self::vec_idx(i, idx, ncols))
-                    .as_mut()
-                    .expect("Invalid index")
-            };
-            out.push(val)
         }
         out
     }
@@ -550,6 +522,45 @@ impl Matrix {
         (lower, upper)
     }
 
+    /// Performs QR decomposition of the matrix using the Householder method.
+    ///
+    /// Taken from [here](https://kwokanthony.medium.com/detailed-explanation-with-example-on-qr-decomposition-by-householder-transformation-5e964d7f7656).
+    fn qr_decomposition(&self) -> (Self, Self) {
+        let (m, n) = self.size();
+        let mut Qs: Vec<Self> = vec![];
+        let mut Q = Self::identity(n);
+
+        let mut curr = self;
+
+        for k in 0..m {
+            // Create sub matrix
+            let mut sub_mat = Self::with_capacity(m - k, n - k);
+            for i in 0..m {
+                let mut row = vec![];
+                for j in 0..n {
+                    if i < k || j < k {
+                        continue;
+                    }
+                    row.push(curr[(i, j)]);
+                }
+                if row.len() > 0 {
+                    sub_mat.push_row(&row);
+                }
+            }
+
+            // Calculate Q matrix
+            {
+                let sign = if sub_mat[(0, 0)] >= 0.0 { 1.0 } else { -1.0 };
+
+                // Get the current column vector
+                // let mut q =
+            }
+        }
+
+        todo!()
+    }
+
+    /// Computes and the inverse of the matrix if one exists.
     pub fn inverse(&self) -> Option<Self> {
         if self.is_square() {
             if self.is_triangular_lower() {
