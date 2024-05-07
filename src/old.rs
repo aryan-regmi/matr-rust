@@ -987,129 +987,129 @@ impl Mul<&Matrix> for &Matrix {
 mod tests {
     use super::*;
 
-    // #[test]
-    // fn can_create_matrix() {
-    //     let mat = Matrix::new(2, 3);
-    //     assert_eq!(mat.num_rows(), 2);
-    //     assert_eq!(mat.num_cols(), 3);
-    //
-    //     let mat = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
-    //     assert_eq!(mat.size(), (2, 3));
-    //
-    //     let mat = Matrix::identity(2);
-    //     assert_eq!(mat.size(), (2, 2));
-    //     assert_eq!(mat[(0, 0)], 1.0);
-    //     assert_eq!(mat[(1, 1)], 1.0);
-    // }
-    //
-    // #[test]
-    // fn can_scale_matrix() {
-    //     let mut mat = Matrix::new(2, 3);
-    //     for i in 0..2 {
-    //         for j in 0..3 {
-    //             mat.set(i, j, 2.0);
-    //         }
-    //     }
-    //     mat.scale(4.0);
-    //
-    //     for i in 0..2 {
-    //         for j in 0..3 {
-    //             assert_eq!(mat.get(i, j), Some(&8.0));
-    //         }
-    //     }
-    // }
-    //
-    // #[test]
-    // fn can_mul_matrix() {
-    //     let mat1 = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
-    //     let mat2 = Matrix::from_vec(3, 2, vec![7., 8., 9., 10., 11., 12.]);
-    //
-    //     let mult = mat1.multiply(&mat2);
-    //
-    //     assert_eq!(mult[(0, 0)], 58.0);
-    //     assert_eq!(mult[(0, 1)], 64.0);
-    //     assert_eq!(mult[(1, 0)], 139.0);
-    //     assert_eq!(mult[(1, 1)], 154.0);
-    // }
-    //
-    // #[test]
-    // fn can_transpose_matrix() {
-    //     let mat1 = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
-    //     assert_eq!(
-    //         mat1.transpose(),
-    //         Matrix::from_vec(3, 2, vec![1., 4., 2., 5., 3., 6.])
-    //     )
-    // }
-    //
-    // #[test]
-    // fn can_check_triangular_matrix() {
-    //     let mat = Matrix::from_vec(2, 2, vec![1., 2., 0., 1.]);
-    //     assert!(mat.is_square() == true);
-    //     assert!(mat.is_triangular_lower() == false);
-    //     assert!(mat.is_triangular_upper() == true);
-    //
-    //     let mat = Matrix::from_vec(2, 2, vec![1., 0., 2., 1.]);
-    //     assert!(mat.is_square() == true);
-    //     assert!(mat.is_triangular_lower() == true);
-    //     assert!(mat.is_triangular_upper() == false);
-    //
-    //     let mat = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
-    //     assert!(mat.is_square() == false);
-    //     assert!(mat.is_triangular_lower() == false);
-    //     assert!(mat.is_triangular_upper() == false);
-    // }
-    //
-    // #[test]
-    // fn can_invert_lower_triangular_matrix() {
-    //     let mat = Matrix::from_vec(2, 2, vec![1., 0., 2., 1.])
-    //         .lower_triangular_inverse()
-    //         .unwrap();
-    //
-    //     assert_eq!(mat, Matrix::from_vec(2, 2, vec![1., 0., -2., 1.]));
-    // }
-    //
-    // #[test]
-    // fn can_invert_upper_triangular_matrix() {
-    //     let mat = Matrix::from_vec(2, 2, vec![1., 2., 0., 1.])
-    //         .upper_triangular_inverse()
-    //         .unwrap();
-    //
-    //     assert_eq!(mat, Matrix::from_vec(2, 2, vec![1., -2., 0., 1.]));
-    // }
-    //
-    // #[test]
-    // fn can_lu_decompose_matrix() {
-    //     let mat = Matrix::from_vec(3, 3, vec![2., 7., 1., 3., -2., 0., 1., 5., 3.]);
-    //     let (l, u) = mat.lu_decomposition();
-    //     let lu = l.clone() * u.clone();
-    //
-    //     assert_eq!(
-    //         l,
-    //         Matrix::from_vec(3, 3, vec![1., 0., 0., 1.5, 1., 0., 0.5, -0.12, 1.])
-    //     );
-    //
-    //     assert_eq!(
-    //         u,
-    //         Matrix::from_vec(3, 3, vec![2., 7., 1., 0., -12.5, -1.5, 0., 0., 2.32])
-    //     );
-    //
-    //     assert_eq!(
-    //         lu,
-    //         Matrix::from_vec(3, 3, vec![2., 7., 1., 3., -2., 0., 1., 5., 3.])
-    //     );
-    // }
-    //
-    // #[test]
-    // fn can_norm_matrix() {
-    //     let mat = Matrix::from_vec(2, 2, vec![1., -7., -2., -3.]);
-    //     assert_eq!(mat.norm(), (63_f32).sqrt())
-    // }
-    //
-    // #[test]
-    // fn can_create_matrix_view() {
-    //     let mat = Matrix::from_vec(2, 2, vec![1., -7., -2., -3.]);
-    //
-    //     let view = mat.view((0, 1), (1, 1));
-    //     assert_eq!(view[(0, 0)], mat[(0, 1)]);
-    // }
+    #[test]
+    fn can_create_matrix() {
+        let mat = Matrix::new(2, 3);
+        assert_eq!(mat.num_rows(), 2);
+        assert_eq!(mat.num_cols(), 3);
+
+        let mat = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
+        assert_eq!(mat.size(), (2, 3));
+
+        let mat = Matrix::identity(2);
+        assert_eq!(mat.size(), (2, 2));
+        assert_eq!(mat[(0, 0)], 1.0);
+        assert_eq!(mat[(1, 1)], 1.0);
+    }
+
+    #[test]
+    fn can_scale_matrix() {
+        let mut mat = Matrix::new(2, 3);
+        for i in 0..2 {
+            for j in 0..3 {
+                mat.set(i, j, 2.0);
+            }
+        }
+        mat.scale(4.0);
+
+        for i in 0..2 {
+            for j in 0..3 {
+                assert_eq!(mat.get(i, j), Some(&8.0));
+            }
+        }
+    }
+
+    #[test]
+    fn can_mul_matrix() {
+        let mat1 = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
+        let mat2 = Matrix::from_vec(3, 2, vec![7., 8., 9., 10., 11., 12.]);
+
+        let mult = mat1.multiply(&mat2);
+
+        assert_eq!(mult[(0, 0)], 58.0);
+        assert_eq!(mult[(0, 1)], 64.0);
+        assert_eq!(mult[(1, 0)], 139.0);
+        assert_eq!(mult[(1, 1)], 154.0);
+    }
+
+    #[test]
+    fn can_transpose_matrix() {
+        let mat1 = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
+        assert_eq!(
+            mat1.transpose(),
+            Matrix::from_vec(3, 2, vec![1., 4., 2., 5., 3., 6.])
+        )
+    }
+
+    #[test]
+    fn can_check_triangular_matrix() {
+        let mat = Matrix::from_vec(2, 2, vec![1., 2., 0., 1.]);
+        assert!(mat.is_square() == true);
+        assert!(mat.is_triangular_lower() == false);
+        assert!(mat.is_triangular_upper() == true);
+
+        let mat = Matrix::from_vec(2, 2, vec![1., 0., 2., 1.]);
+        assert!(mat.is_square() == true);
+        assert!(mat.is_triangular_lower() == true);
+        assert!(mat.is_triangular_upper() == false);
+
+        let mat = Matrix::from_vec(2, 3, vec![1., 2., 3., 4., 5., 6.]);
+        assert!(mat.is_square() == false);
+        assert!(mat.is_triangular_lower() == false);
+        assert!(mat.is_triangular_upper() == false);
+    }
+
+    #[test]
+    fn can_invert_lower_triangular_matrix() {
+        let mat = Matrix::from_vec(2, 2, vec![1., 0., 2., 1.])
+            .lower_triangular_inverse()
+            .unwrap();
+
+        assert_eq!(mat, Matrix::from_vec(2, 2, vec![1., 0., -2., 1.]));
+    }
+
+    #[test]
+    fn can_invert_upper_triangular_matrix() {
+        let mat = Matrix::from_vec(2, 2, vec![1., 2., 0., 1.])
+            .upper_triangular_inverse()
+            .unwrap();
+
+        assert_eq!(mat, Matrix::from_vec(2, 2, vec![1., -2., 0., 1.]));
+    }
+
+    #[test]
+    fn can_lu_decompose_matrix() {
+        let mat = Matrix::from_vec(3, 3, vec![2., 7., 1., 3., -2., 0., 1., 5., 3.]);
+        let (l, u) = mat.lu_decomposition();
+        let lu = l.clone() * u.clone();
+
+        assert_eq!(
+            l,
+            Matrix::from_vec(3, 3, vec![1., 0., 0., 1.5, 1., 0., 0.5, -0.12, 1.])
+        );
+
+        assert_eq!(
+            u,
+            Matrix::from_vec(3, 3, vec![2., 7., 1., 0., -12.5, -1.5, 0., 0., 2.32])
+        );
+
+        assert_eq!(
+            lu,
+            Matrix::from_vec(3, 3, vec![2., 7., 1., 3., -2., 0., 1., 5., 3.])
+        );
+    }
+
+    #[test]
+    fn can_norm_matrix() {
+        let mat = Matrix::from_vec(2, 2, vec![1., -7., -2., -3.]);
+        assert_eq!(mat.norm(), (63_f32).sqrt())
+    }
+
+    #[test]
+    fn can_create_matrix_view() {
+        let mat = Matrix::from_vec(2, 2, vec![1., -7., -2., -3.]);
+
+        let view = mat.view((0, 1), (1, 1));
+        assert_eq!(view[(0, 0)], mat[(0, 1)]);
+    }
 }

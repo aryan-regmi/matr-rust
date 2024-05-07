@@ -371,6 +371,43 @@ impl Matrix {
         norm.sqrt()
     }
 
+    /// Returns `true` if the matrix is square.
+    pub fn is_square(&self) -> bool {
+        self.nrows == self.ncols
+    }
+
+    /// Returns `true` if the matrix is an upper triangular.
+    pub fn is_triangular_upper(&self) -> bool {
+        if self.is_square() {
+            for i in 1..self.nrows {
+                for j in 0..i {
+                    if self[(i, j)] != 0.0 {
+                        return false;
+                    }
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Returns `true` if the matrix is an lower triangular.
+    pub fn is_triangular_lower(&self) -> bool {
+        if self.is_square() {
+            for i in 0..self.nrows - 1 {
+                for j in i + 1..self.nrows {
+                    if self[(i, j)] != 0.0 {
+                        return false;
+                    }
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
     /// Returns a new matrix with each element from `self` multiplied by the `scalar`.
     pub fn scale(&self, scalar: f32) -> Self {
         let mut out = self.clone();
@@ -418,6 +455,72 @@ impl Matrix {
             }
         }
         out
+    }
+
+    /// Calculates the inverse of a lower triangular matrix (forward substitution).
+    fn lower_triangular_inverse(&self) -> Option<Self> {
+        let n = self.nrows;
+        let mut out = Self::zeros(n, n);
+
+        // Forward substitution
+        for i in 0..n {
+            // Check if matrix is singular
+            if self[(i, i)] == 0.0 {
+                return None;
+            }
+
+            out[(i, i)] = 1.0 / self[(i, i)];
+
+            for j in 0..i {
+                for k in j..i {
+                    out[(i, j)] += self[(i, k)] * out[(k, j)];
+                    out[(i, j)] = -out[(i, j)] / self[(i, i)];
+                }
+            }
+        }
+
+        Some(out)
+    }
+
+    /// Calculates the inverse of an upper triangular matrix (back substitution).
+    fn upper_triangular_inverse(&self) -> Option<Self> {
+        let n = self.nrows;
+        let mut out = self.clone();
+
+        // Back substitution
+        for i in (1..=n - 1).rev() {
+            // Check if matrix is singular
+            if self[(i, i)] == 0.0 {
+                return None;
+            }
+
+            out[(i, i)] = 1.0 / self[(i, i)];
+
+            for j in (0..=i - 1).rev() {
+                let mut sum = 0.0;
+                for k in (j + 1..=i).rev() {
+                    sum = sum - out[(j, k)] * out[(k, i)];
+                }
+
+                out[(j, i)] = sum / out[(j, j)];
+            }
+        }
+
+        Some(out)
+    }
+
+    pub fn inverse(&self) -> Option<Self> {
+        if self.is_square() {
+            if self.is_triangular_lower() {
+                return self.lower_triangular_inverse();
+            } else if self.is_triangular_upper() {
+                return self.upper_triangular_inverse();
+            } else {
+                todo!("Implement LU Decomp")
+            }
+        } else {
+            todo!("Implement QR Decomp")
+        }
     }
 }
 
@@ -621,5 +724,36 @@ mod tests {
             let prod = mat1.multiply_elems(&mat2);
             assert_eq!(prod, Matrix::from_slice(2, 2, &[1., 4., 9., 16.]));
         }
+    }
+
+    #[test]
+    fn can_check_triangular_matrix() {
+        let mat = Matrix::from_slice(2, 2, &[1., 2., 0., 1.]);
+        assert!(mat.is_square() == true);
+        assert!(mat.is_triangular_lower() == false);
+        assert!(mat.is_triangular_upper() == true);
+
+        let mat = Matrix::from_slice(2, 2, &[1., 0., 2., 1.]);
+        assert!(mat.is_square() == true);
+        assert!(mat.is_triangular_lower() == true);
+        assert!(mat.is_triangular_upper() == false);
+
+        let mat = Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]);
+        assert!(mat.is_square() == false);
+        assert!(mat.is_triangular_lower() == false);
+        assert!(mat.is_triangular_upper() == false);
+    }
+
+    #[test]
+    fn can_invert_triangular_matrix() {
+        // Lower triangular
+        let mat = Matrix::from_slice(2, 2, &[1., 0., 2., 1.]);
+        let inverse = mat.inverse().unwrap();
+        assert_eq!(inverse, Matrix::from_slice(2, 2, &[1., 0., -2., 1.]));
+
+        // Upper triangular
+        let mat = Matrix::from_slice(2, 2, &[1., 2., 0., 1.]);
+        let inverse = mat.inverse().unwrap();
+        assert_eq!(inverse, Matrix::from_slice(2, 2, &[1., -2., 0., 1.]));
     }
 }
