@@ -149,10 +149,8 @@ impl Matrix {
         self.ncols
     }
 
-    // FIXME: Return new Matrix instead
-    //
-    /// Returns an immutable reference to the specified row of the matrix.
-    pub fn row(&self, idx: usize) -> &[f32] {
+    /// Returns a new matrix with the values from the specified row of the matrix.
+    pub fn row(&self, idx: usize) -> Self {
         // Input validation
         if idx >= self.nrows {
             panic!(
@@ -161,17 +159,16 @@ impl Matrix {
             )
         }
 
-        unsafe {
-            slice_from_raw_parts(self.data.as_ptr().add(idx * self.ncols), self.ncols)
-                .as_ref()
-                .expect("Invalid row index")
+        let mut out = Self::zeros(1, self.ncols);
+        for j in 0..self.ncols {
+            out[(0, j)] = self[(idx, j)];
         }
+
+        out
     }
 
-    // FIXME: Return new Matrix instead
-    //
-    /// Returns an immutable reference to the specified column of the matrix.
-    pub fn col(&self, idx: usize) -> Vec<&f32> {
+    /// Returns a new matrix with the values from the specified column of the matrix.
+    pub fn col(&self, idx: usize) -> Self {
         // Input validation
         if idx >= self.ncols {
             panic!(
@@ -180,10 +177,11 @@ impl Matrix {
             )
         }
 
-        let mut out = vec![];
+        let mut out = Self::zeros(self.nrows, 1);
         for i in 0..self.nrows {
-            out.push(&self[(i, idx)])
+            out[(i, 0)] = self[(i, idx)];
         }
+
         out
     }
 
