@@ -317,6 +317,7 @@ impl Matrix {
         self.set_row(self.nrows - 1, row);
     }
 
+    /// Appends the column to the end of the matrix.
     pub fn push_col(&mut self, col: &[f32]) {
         if self.nrows == 0 {
             self.nrows = col.len();
@@ -344,6 +345,19 @@ impl Matrix {
         }
 
         self.ncols += 1;
+    }
+
+    /// Returns a new matrix with each element from `self` multiplied by the `scalar`.
+    pub fn scale(&self, scalar: f32) -> Self {
+        let mut out = self.clone();
+
+        for i in 0..self.nrows {
+            for j in 0..self.ncols {
+                // self[(i, j)] * scalar;
+            }
+        }
+
+        todo!()
     }
 }
 
@@ -425,6 +439,21 @@ impl PartialEq for Matrix {
         }
 
         true
+    }
+}
+
+impl Clone for Matrix {
+    fn clone(&self) -> Self {
+        let mut out = Self::with_capacity(self.nrows, self.ncols);
+        out.nrows = self.nrows;
+        out.ncols = self.ncols;
+
+        for i in 0..self.nrows {
+            for j in 0..self.ncols {
+                out[(i, j)] = self[(i, j)];
+            }
+        }
+        out
     }
 }
 
