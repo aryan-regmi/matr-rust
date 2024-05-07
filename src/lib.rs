@@ -347,6 +347,8 @@ impl Matrix {
         self.ncols += 1;
     }
 
+    // TODO: Add in-place versions of `transpose` and `scale`?
+
     /// Returns the transpose of the matrix.
     pub fn transpose(&self) -> Self {
         let mut out = Self::zeros(self.ncols, self.nrows);
@@ -364,6 +366,29 @@ impl Matrix {
         for i in 0..self.nrows {
             for j in 0..self.ncols {
                 out[(i, j)] *= scalar;
+            }
+        }
+        out
+    }
+
+    /// Computes and returns the matrix multiplication of `self * other`.
+    pub fn multiply(&self, other: &Self) -> Self {
+        // Input validation
+        if self.ncols != other.nrows {
+            panic!(
+                "Invalid size: The `other` matrix must have {} rows",
+                self.ncols
+            )
+        }
+
+        let mut out = Self::zeros(self.nrows, other.ncols);
+        for i in 0..self.nrows {
+            for j in 0..other.ncols {
+                let mut sum = 0.0;
+                for k in 0..self.ncols {
+                    sum += self[(i, k)] * other[(k, j)];
+                }
+                out[(i, j)] = sum;
             }
         }
         out
@@ -551,5 +576,21 @@ mod tests {
     fn can_transpose() {
         let mat = Matrix::from_slice(1, 4, &[1., 2., 3., 4.]);
         assert_eq!(mat.transpose(), Matrix::from_slice(4, 1, &[1., 2., 3., 4.]))
+    }
+
+    #[test]
+    fn can_mul_matrix() {
+        let mat1 = Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]);
+        let mat2 = Matrix::from_slice(3, 2, &[7., 8., 9., 10., 11., 12.]);
+        let prod = mat1.multiply(&mat2);
+        assert_eq!(prod, Matrix::from_slice(2, 2, &[58., 64., 139., 154.]));
+
+        let mat1 = Matrix::from_slice(3, 1, &[1., 2., 3.]);
+        let mat2 = Matrix::from_slice(1, 3, &[1., 2., 3.]);
+        let prod = mat1.multiply(&mat2);
+        assert_eq!(
+            prod,
+            Matrix::from_slice(3, 3, &[1., 2., 3., 2., 4., 6., 3., 6., 9.])
+        );
     }
 }
