@@ -1,5 +1,6 @@
 use std::{
     alloc::{self, Layout},
+    mem::{self, size_of},
     ops::{Index, IndexMut},
     ptr::{slice_from_raw_parts, slice_from_raw_parts_mut, NonNull},
 };
@@ -213,6 +214,108 @@ impl Matrix {
         }
         out
     }
+
+    /// Sets the specified row to the given one.
+    ///
+    /// # Panics
+    /// Panics if the row index (`idx`) is larger than the number of rows in the matrix.
+    pub fn set_row(&mut self, idx: usize, row: &[f32]) {
+        // Input validation
+        {
+            if idx >= self.nrows {
+                panic!(
+                    "Invalid row index: The row index must be less than {} (was {})",
+                    self.nrows, idx
+                )
+            }
+
+            if row.len() != self.ncols {
+                panic!(
+                    "Invalid row length: The row must have {} elements (has {})",
+                    self.ncols,
+                    row.len()
+                )
+            }
+        }
+
+        for j in 0..self.ncols {
+            self[(idx, j)] = row[j];
+        }
+    }
+
+    /// Sets the specified column to the given one.
+    ///
+    /// # Panics
+    /// Panics if the column index (`idx`) is larger than the number of columns in the matrix.
+    pub fn set_col(&mut self, idx: usize, col: &[f32]) {
+        // Input validation
+        {
+            if idx >= self.ncols {
+                panic!(
+                    "Invalid column index: The column index must be less than {} (was {})",
+                    self.ncols, idx
+                )
+            }
+
+            if col.len() != self.nrows {
+                panic!(
+                    "Invalid column length: The column must have {} elements (has {})",
+                    self.nrows,
+                    col.len()
+                )
+            }
+        }
+
+        for i in 0..self.nrows {
+            self[(i, idx)] = col[i];
+        }
+    }
+
+    /// Increases the capacity of the matrix.
+    fn resize(&mut self) {
+        // Increase the capacity
+        const RESIZE_FACTOR: usize = 2;
+        let mut new_cap = self.capacity * RESIZE_FACTOR;
+        if self.nrows == 0 {
+            new_cap = self.ncols * RESIZE_FACTOR;
+        } else if self.ncols == 0 {
+            new_cap = self.nrows * RESIZE_FACTOR;
+        }
+
+        // Create new matrix w/ the new capacity and copy values into it
+        let mut resized = Self::with_capacity(new_cap, 1);
+        resized.nrows = self.nrows;
+        resized.ncols = self.ncols;
+        let resized_data = unsafe {
+            slice_from_raw_parts_mut(resized.data.as_ptr(), self.nrows * self.ncols)
+                .as_mut()
+                .expect("Invalid slice")
+        };
+        let old_data = unsafe {
+            slice_from_raw_parts(self.data.as_ptr(), self.nrows * self.ncols)
+                .as_ref()
+                .expect("Invalid slice")
+        };
+        resized_data.clone_from_slice(old_data);
+
+        // Increase the capacity
+        *self = resized;
+    }
+
+    /// Appends the row to the end of the matrix.
+    pub fn push_row(&mut self, row: &[f32]) {
+        if self.ncols == 0 {
+            self.ncols = row.len();
+        }
+
+        // Resize if not enough space
+        if self.capacity < (self.nrows + 1) * self.ncols {
+            self.resize();
+        }
+        self.nrows += 1;
+
+        self.set_row(self.nrows - 1, row);
+    }
 }
 
 impl Index<(usize, usize)> for Matrix {
@@ -278,6 +381,24 @@ impl std::fmt::Debug for Matrix {
     }
 }
 
+impl PartialEq for Matrix {
+    fn eq(&self, other: &Self) -> bool {
+        if self.nrows != other.nrows || self.ncols != other.ncols {
+            return false;
+        }
+
+        for i in 0..self.nrows {
+            for j in 0..self.ncols {
+                if self[(i, j)] != other[(i, j)] {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -305,5 +426,32 @@ mod tests {
 
         let mat = Matrix::identity(4);
         dbg!(mat);
+    }
+
+    #[test]
+    fn can_set_rows() {
+        let mut mat = Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]);
+        mat.set_row(1, &[0.0; 3]);
+        assert_eq!(mat, Matrix::from_slice(2, 3, &[1., 2., 3., 0., 0., 0.]))
+    }
+
+    #[test]
+    fn can_set_cols() {
+        let mut mat = Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]);
+        mat.set_col(1, &[0.0; 2]);
+        assert_eq!(mat, Matrix::from_slice(2, 3, &[1., 0., 3., 4., 0., 6.]))
+    }
+
+    #[test]
+    fn can_push_rows() {
+        let mut mat = Matrix::new();
+        mat.push_row(&[1., 2., 3.]);
+        mat.push_row(&[4., 5., 6.]);
+        assert_eq!(mat, Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]));
+
+        let mut mat = Matrix::with_capacity(5, 5);
+        mat.push_row(&[1., 2., 3.]);
+        mat.push_row(&[4., 5., 6.]);
+        assert_eq!(mat, Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]));
     }
 }
