@@ -350,14 +350,12 @@ impl Matrix {
     /// Returns a new matrix with each element from `self` multiplied by the `scalar`.
     pub fn scale(&self, scalar: f32) -> Self {
         let mut out = self.clone();
-
         for i in 0..self.nrows {
             for j in 0..self.ncols {
-                // self[(i, j)] * scalar;
+                out[(i, j)] *= scalar;
             }
         }
-
-        todo!()
+        out
     }
 }
 
@@ -530,5 +528,11 @@ mod tests {
         let mut mat = Matrix::from_slice(2, 2, &[1., 2., 3., 4.]);
         mat.push_col(&[5., 6.]);
         assert_eq!(mat, Matrix::from_slice(2, 3, &[1., 2., 5., 3., 4., 6.]));
+    }
+
+    #[test]
+    fn can_scale() {
+        let mat = Matrix::from_slice(2, 2, &[1., 2., 3., 4.]);
+        assert_eq!(mat.scale(2.0), Matrix::from_slice(2, 2, &[2., 4., 6., 8.]));
     }
 }
