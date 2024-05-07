@@ -347,6 +347,17 @@ impl Matrix {
         self.ncols += 1;
     }
 
+    /// Returns the transpose of the matrix.
+    pub fn transpose(&self) -> Self {
+        let mut out = Self::zeros(self.ncols, self.nrows);
+        for j in 0..self.ncols {
+            for i in 0..self.nrows {
+                out[(j, i)] = self[(i, j)];
+            }
+        }
+        out
+    }
+
     /// Returns a new matrix with each element from `self` multiplied by the `scalar`.
     pub fn scale(&self, scalar: f32) -> Self {
         let mut out = self.clone();
@@ -534,5 +545,11 @@ mod tests {
     fn can_scale() {
         let mat = Matrix::from_slice(2, 2, &[1., 2., 3., 4.]);
         assert_eq!(mat.scale(2.0), Matrix::from_slice(2, 2, &[2., 4., 6., 8.]));
+    }
+
+    #[test]
+    fn can_transpose() {
+        let mat = Matrix::from_slice(1, 4, &[1., 2., 3., 4.]);
+        assert_eq!(mat.transpose(), Matrix::from_slice(4, 1, &[1., 2., 3., 4.]))
     }
 }
