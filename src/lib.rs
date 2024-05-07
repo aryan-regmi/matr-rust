@@ -360,6 +360,17 @@ impl Matrix {
         out
     }
 
+    /// Calculates the Euclidean norm of the matrix.
+    pub fn norm(&self) -> f32 {
+        let mut norm = 0.0;
+        for i in 0..self.nrows {
+            for j in 0..self.ncols {
+                norm += self[(i, j)].powi(2)
+            }
+        }
+        norm.sqrt()
+    }
+
     /// Returns a new matrix with each element from `self` multiplied by the `scalar`.
     pub fn scale(&self, scalar: f32) -> Self {
         let mut out = self.clone();
