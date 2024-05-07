@@ -2,7 +2,7 @@ use std::{
     alloc::{self, Layout},
     mem::{self, size_of},
     ops::{Index, IndexMut},
-    ptr::{slice_from_raw_parts, slice_from_raw_parts_mut, NonNull},
+    ptr::{self, slice_from_raw_parts, slice_from_raw_parts_mut, NonNull},
 };
 
 pub struct Matrix {
@@ -316,6 +316,58 @@ impl Matrix {
 
         self.set_row(self.nrows - 1, row);
     }
+
+    pub fn push_col(&mut self, col: &[f32]) {
+        if self.nrows == 0 {
+            self.nrows = col.len();
+        }
+
+        // Resize if not enough space
+        if self.capacity < (self.ncols + 1) * self.nrows {
+            self.resize();
+        }
+
+        for i in 1..col.len() + 1 {
+            unsafe {
+                // Shift everything after the index to the right
+                let idx = self.ncols * i + (i - 1);
+                dbg!(idx);
+                let nshifted = self.ncols * self.nrows - i - (i * 1);
+                dbg!(nshifted);
+                ptr::copy(
+                    self.data.as_ptr().add(idx),
+                    self.data.as_ptr().add(idx + 1),
+                    nshifted,
+                );
+                // dbg!("Shifted!");
+
+                // Update index with value from `col`
+                *self.data.as_ptr().add(idx) = col[i - 1];
+            }
+        }
+
+        // let mut idx = 0;
+        // for i in 0..self.ncols * self.nrows {
+        //     if i % self.ncols == 0 && i != 0 {
+        //         dbg!("Here");
+        //         unsafe {
+        //             // Shift everything after the index to the right
+        //             let nshifted = self.ncols * self.nrows - i;
+        //             ptr::copy(
+        //                 self.data.as_ptr().add(i),
+        //                 self.data.as_ptr().add(i + 1),
+        //                 nshifted,
+        //             );
+        //
+        //             // Update index with value from `col`
+        //             *self.data.as_ptr().add(i) = col[idx];
+        //             idx += 1;
+        //         };
+        //     }
+        // }
+
+        self.ncols += 1;
+    }
 }
 
 impl Index<(usize, usize)> for Matrix {
@@ -453,5 +505,25 @@ mod tests {
         mat.push_row(&[1., 2., 3.]);
         mat.push_row(&[4., 5., 6.]);
         assert_eq!(mat, Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]));
+
+        let mut mat = Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]);
+        mat.push_row(&[7., 8., 9.]);
+        assert_eq!(
+            mat,
+            Matrix::from_slice(3, 3, &[1., 2., 3., 4., 5., 6., 7., 8., 9.])
+        );
+    }
+
+    #[test]
+    fn can_push_cols() {
+        let mut mat = Matrix::new();
+        mat.push_col(&[1., 3.]);
+        // mat.push_col(&[2., 4.]);
+        dbg!(&mat);
+        // assert_eq!(mat, Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]));
+
+        // let mut mat = Matrix::from_slice(2, 2, &[1., 2., 3., 4.]);
+        // mat.push_col(&[5., 6.]);
+        // mat.push_col(&[7., 8.]);
     }
 }
