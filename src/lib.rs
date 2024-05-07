@@ -509,6 +509,47 @@ impl Matrix {
         Some(out)
     }
 
+    /// Performs LU decomposition of the matrix using Doolittle's method.
+    ///
+    /// Taken from [here](https://www.geeksforgeeks.org/doolittle-algorithm-lu-decomposition/).
+    fn lu_decomposition(&self) -> (Self, Self) {
+        let n = self.nrows;
+        let mut lower = Matrix::zeros(n, n);
+        let mut upper = Matrix::zeros(n, n);
+
+        for i in 0..n {
+            // Upper triangular
+            for k in i..n {
+                // Sum of `L[i,j] * U[j,k]`
+                let mut sum = 0.0;
+                for j in 0..i {
+                    sum += lower[(i, j)] * upper[(j, k)];
+                }
+
+                // Evaluate `U[i,k]`
+                upper[(i, k)] = self[(i, k)] - sum;
+            }
+
+            // Lower triangular
+            for k in i..n {
+                if i == k {
+                    lower[(i, i)] = 1.0;
+                } else {
+                    // Sum of `L[k,j] * U[j,i]`
+                    let mut sum = 0.0;
+                    for j in 0..i {
+                        sum += lower[(k, j)] * upper[(j, i)];
+                    }
+
+                    // Evaluate `L[k,i]`
+                    lower[(k, i)] = (self[(k, i)] - sum) / upper[(i, i)];
+                }
+            }
+        }
+
+        (lower, upper)
+    }
+
     pub fn inverse(&self) -> Option<Self> {
         if self.is_square() {
             if self.is_triangular_lower() {
@@ -516,7 +557,8 @@ impl Matrix {
             } else if self.is_triangular_upper() {
                 return self.upper_triangular_inverse();
             } else {
-                todo!("Implement LU Decomp")
+                let (l, u) = self.lu_decomposition();
+                return Some(u.inverse()?.multiply(&l.inverse()?));
             }
         } else {
             todo!("Implement QR Decomp")
@@ -755,5 +797,12 @@ mod tests {
         let mat = Matrix::from_slice(2, 2, &[1., 2., 0., 1.]);
         let inverse = mat.inverse().unwrap();
         assert_eq!(inverse, Matrix::from_slice(2, 2, &[1., -2., 0., 1.]));
+    }
+
+    #[test]
+    fn can_invert_square_matrix() {
+        let mat = Matrix::from_slice(2, 2, &[1., 2., 3., 4.]);
+        let inverse = mat.inverse().unwrap();
+        assert_eq!(inverse, Matrix::from_slice(2, 2, &[-2., 1., 1.5, -0.5]));
     }
 }
