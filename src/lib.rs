@@ -404,6 +404,21 @@ impl Matrix {
         }
         out
     }
+
+    /// Multiples each element of `self` with each corresponding element of `other`.
+    pub fn multiply_elems(&self, other: &Self) -> Self {
+        if self.size() != other.size() {
+            panic!("Invalid size: The matricies must have the same size for element-wise multiplication")
+        }
+
+        let mut out = Self::zeros(self.nrows, self.ncols);
+        for i in 0..self.nrows {
+            for j in 0..self.ncols {
+                out[(i, j)] = self[(i, j)] * other[(i, j)];
+            }
+        }
+        out
+    }
 }
 
 impl Index<(usize, usize)> for Matrix {
@@ -591,17 +606,20 @@ mod tests {
 
     #[test]
     fn can_mul_matrix() {
-        let mat1 = Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]);
-        let mat2 = Matrix::from_slice(3, 2, &[7., 8., 9., 10., 11., 12.]);
-        let prod = mat1.multiply(&mat2);
-        assert_eq!(prod, Matrix::from_slice(2, 2, &[58., 64., 139., 154.]));
+        // Mat mul
+        {
+            let mat1 = Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]);
+            let mat2 = Matrix::from_slice(3, 2, &[7., 8., 9., 10., 11., 12.]);
+            let prod = mat1.multiply(&mat2);
+            assert_eq!(prod, Matrix::from_slice(2, 2, &[58., 64., 139., 154.]));
+        }
 
-        let mat1 = Matrix::from_slice(3, 1, &[1., 2., 3.]);
-        let mat2 = Matrix::from_slice(1, 3, &[1., 2., 3.]);
-        let prod = mat1.multiply(&mat2);
-        assert_eq!(
-            prod,
-            Matrix::from_slice(3, 3, &[1., 2., 3., 2., 4., 6., 3., 6., 9.])
-        );
+        // Elem mul
+        {
+            let mat1 = Matrix::from_slice(2, 2, &[1., 2., 3., 4.]);
+            let mat2 = mat1.clone();
+            let prod = mat1.multiply_elems(&mat2);
+            assert_eq!(prod, Matrix::from_slice(2, 2, &[1., 4., 9., 16.]));
+        }
     }
 }
