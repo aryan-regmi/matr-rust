@@ -1,20 +1,8 @@
 use std::{
     alloc::{self, Layout},
-    mem::{self, size_of},
-    ops::{Index, IndexMut},
+    ops::{Add, Div, Index, IndexMut, Mul, Sub},
     ptr::{self, slice_from_raw_parts, slice_from_raw_parts_mut, NonNull},
 };
-
-/// Returns 1 if the value is positivie, 0 if it's zero, and -1 if it is negative.
-fn sign(val: f32) -> f32 {
-    if val == 0. {
-        0.
-    } else if val > 0. {
-        1.
-    } else {
-        -1.
-    }
-}
 
 pub struct Matrix {
     data: NonNull<f32>,
@@ -105,11 +93,11 @@ impl Matrix {
     /// Creates an identity matrix of the specified size.
     ///
     /// # Panics
-    /// * Panics if the size is zero.
-    pub fn identity(size: usize) -> Self {
-        let mut out = Self::with_value(size, size, 0.0);
-        for i in 0..size {
-            for j in 0..size {
+    /// * Panics if the number of rows or columns is zero.
+    pub fn identity(nrows: usize, ncols: usize) -> Self {
+        let mut out = Self::with_value(nrows, ncols, 0.0);
+        for i in 0..nrows {
+            for j in 0..ncols {
                 if i == j {
                     out[(i, j)] = 1.0;
                 }
@@ -526,10 +514,8 @@ impl Matrix {
     fn qr_decomposition(&self) -> (Self, Self) {
         let (m, n) = self.size();
         let mut Qs: Vec<Self> = vec![];
-        let mut Q = Self::identity(n);
 
-        let mut curr = self;
-
+        let mut curr = self.clone();
         for k in 0..m {
             // Create sub matrix
             let mut sub_mat = Self::with_capacity(m - k, n - k);
@@ -546,16 +532,92 @@ impl Matrix {
                 }
             }
 
-            // Calculate Q matrix
+            // Calculations
             {
                 let sign = if sub_mat[(0, 0)] >= 0.0 { 1.0 } else { -1.0 };
 
                 // Get the current column vector
-                // let mut q =
+                let mut q = sub_mat.col(0);
+                let e = Self::from_slice(
+                    1,
+                    sub_mat.nrows,
+                    &(0..sub_mat.nrows)
+                        .map(|x| if x == 0 { 1.0 } else { 0.0 })
+                        .collect::<Vec<f32>>(),
+                );
+                // let e = Self::from_slice(
+                //     1,
+                //     sub_mat.ncols,
+                //     &(0..sub_mat.ncols)
+                //         .map(|x| if x == 0 { 1.0 } else { 0.0 })
+                //         .collect::<Vec<f32>>(),
+                // );
+
+                // Normalize the column vector
+                dbg!(&sub_mat);
+                dbg!(&q);
+                dbg!(&e);
+                let b = &q - (-sign) * q.norm() * &e;
+                q = &b / b.norm();
+
+                // Calculate Q matrix
+                let mut Q = Self::zeros(sub_mat.nrows, sub_mat.ncols);
+                for i in 0..sub_mat.nrows {
+                    let mut row = vec![];
+                    for j in 0..sub_mat.ncols {
+                        if i == j {
+                            row.push(1. - 2. * q[(i, 0)] * q[(j, 0)]);
+                        } else {
+                            row.push(-2. * q[(i, 0)] * q[(j, 0)]);
+                        }
+                    }
+                    Q.push_row(&row)
+                }
+
+                // Extend Q if necessary
+                if Q.nrows < self.nrows && Q.ncols < self.ncols {
+                    let m1 = Q.nrows;
+                    let m2 = self.nrows;
+                    let mdiff = m2 - m1;
+                    if mdiff > 0 {
+                        let mut Q_ext = Self::zeros(m1, m1);
+                        for i in 0..m2 {
+                            let mut row = vec![];
+                            for j in 0..m2 {
+                                // Add the extended part
+                                if i < mdiff || j < mdiff {
+                                    if i == j {
+                                        row.push(1.);
+                                    } else {
+                                        row.push(0.);
+                                    }
+                                }
+                                // Add Q to the extended matrix
+                                else {
+                                    row.push(Q[(i - mdiff, j - mdiff)])
+                                }
+                            }
+                        }
+                        Q = Q_ext;
+                    }
+                }
+
+                // Save current iteration of the Q matrix
+                curr = &Q * self;
+                Qs.push(Q);
             }
         }
 
-        todo!()
+        // Calculate Q and R given the iterations of Q_k
+        let mut R = self.clone();
+        let mut Q = Self::identity(self.nrows, self.ncols);
+        for mat in &Qs {
+            R = mat * &R;
+            let mat = mat.transpose();
+            Q = &Q * &mat;
+        }
+
+        (Q, R)
     }
 
     /// Computes and the inverse of the matrix if one exists.
@@ -567,10 +629,12 @@ impl Matrix {
                 return self.upper_triangular_inverse();
             } else {
                 let (l, u) = self.lu_decomposition();
-                return Some(u.inverse()?.multiply(&l.inverse()?));
+                return Some(&u.inverse()? * &l.inverse()?);
             }
         } else {
-            todo!("Implement QR Decomp")
+            let (q, r) = self.qr_decomposition();
+            dbg!(&r);
+            return Some(&r.inverse()? * &q.transpose());
         }
     }
 }
@@ -671,6 +735,148 @@ impl Clone for Matrix {
     }
 }
 
+impl Add<&Matrix> for &Matrix {
+    type Output = Matrix;
+
+    fn add(self, rhs: &Matrix) -> Self::Output {
+        if self.size() != rhs.size() {
+            panic!("Invalid size: The sizes of the two matrices must be equal")
+        }
+
+        let mut out = Matrix::zeros(self.nrows, self.ncols);
+        for i in 0..self.nrows {
+            for j in 0..self.ncols {
+                out[(i, j)] = self[(i, j)] + rhs[(i, j)];
+            }
+        }
+        out
+    }
+}
+
+impl Add<f32> for &Matrix {
+    type Output = Matrix;
+
+    fn add(self, rhs: f32) -> Self::Output {
+        let mut out = Matrix::zeros(self.nrows, self.ncols);
+        for i in 0..self.nrows {
+            for j in 0..self.ncols {
+                out[(i, j)] = self[(i, j)] + rhs;
+            }
+        }
+        out
+    }
+}
+
+impl Add<&Matrix> for f32 {
+    type Output = Matrix;
+
+    fn add(self, rhs: &Matrix) -> Self::Output {
+        let mut out = Matrix::zeros(rhs.nrows, rhs.ncols);
+        for i in 0..rhs.nrows {
+            for j in 0..rhs.ncols {
+                out[(i, j)] = rhs[(i, j)] + self;
+            }
+        }
+        out
+    }
+}
+
+impl Sub<&Matrix> for &Matrix {
+    type Output = Matrix;
+
+    fn sub(self, rhs: &Matrix) -> Self::Output {
+        if self.size() != rhs.size() {
+            panic!("Invalid size: The sizes of the two matrices must be equal")
+        }
+
+        let mut out = Matrix::zeros(self.nrows, self.ncols);
+        for i in 0..self.nrows {
+            for j in 0..self.ncols {
+                out[(i, j)] = self[(i, j)] - rhs[(i, j)];
+            }
+        }
+        out
+    }
+}
+
+impl Sub<Matrix> for &Matrix {
+    type Output = Matrix;
+
+    fn sub(self, rhs: Matrix) -> Self::Output {
+        if self.size() != rhs.size() {
+            panic!("Invalid size: The sizes of the two matrices must be equal")
+        }
+
+        let mut out = Matrix::zeros(self.nrows, self.ncols);
+        for i in 0..self.nrows {
+            for j in 0..self.ncols {
+                out[(i, j)] = self[(i, j)] - rhs[(i, j)];
+            }
+        }
+        out
+    }
+}
+
+impl Sub<f32> for &Matrix {
+    type Output = Matrix;
+
+    fn sub(self, rhs: f32) -> Self::Output {
+        let mut out = Matrix::zeros(self.nrows, self.ncols);
+        for i in 0..self.nrows {
+            for j in 0..self.ncols {
+                out[(i, j)] = self[(i, j)] + rhs;
+            }
+        }
+        out
+    }
+}
+
+impl Sub<&Matrix> for f32 {
+    type Output = Matrix;
+
+    fn sub(self, rhs: &Matrix) -> Self::Output {
+        let mut out = Matrix::zeros(rhs.nrows, rhs.ncols);
+        for i in 0..rhs.nrows {
+            for j in 0..rhs.ncols {
+                out[(i, j)] = rhs[(i, j)] + self;
+            }
+        }
+        out
+    }
+}
+
+impl Mul<&Matrix> for &Matrix {
+    type Output = Matrix;
+
+    fn mul(self, rhs: &Matrix) -> Self::Output {
+        self.multiply(rhs)
+    }
+}
+
+impl Mul<f32> for &Matrix {
+    type Output = Matrix;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        self.scale(rhs)
+    }
+}
+
+impl Mul<&Matrix> for f32 {
+    type Output = Matrix;
+
+    fn mul(self, rhs: &Matrix) -> Self::Output {
+        rhs.scale(self)
+    }
+}
+
+impl Div<f32> for &Matrix {
+    type Output = Matrix;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        self.scale(1.0 / rhs)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -696,7 +902,7 @@ mod tests {
         let mat = Matrix::ones(2, 1);
         dbg!(mat);
 
-        let mat = Matrix::identity(4);
+        let mat = Matrix::identity(4, 4);
         dbg!(mat);
     }
 
@@ -813,5 +1019,13 @@ mod tests {
         let mat = Matrix::from_slice(2, 2, &[1., 2., 3., 4.]);
         let inverse = mat.inverse().unwrap();
         assert_eq!(inverse, Matrix::from_slice(2, 2, &[-2., 1., 1.5, -0.5]));
+    }
+
+    #[test]
+    fn can_invert_rect_matrix() {
+        let mat = Matrix::from_slice(2, 3, &[1., 2., 3., 4., 5., 6.]);
+        let inverse = mat.inverse().unwrap();
+        dbg!(inverse);
+        // assert_eq!(inverse, Matrix::from_slice(2, 2, &[-2., 1., 1.5, -0.5]));
     }
 }
